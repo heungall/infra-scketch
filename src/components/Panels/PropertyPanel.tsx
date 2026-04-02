@@ -6,6 +6,11 @@ import {
   type NodeVariant,
   type EdgeDirection,
   type EdgeLineStyle,
+  type PresetColor,
+  PREDEFINED_COLORS,
+  SERVER_NODE_CONFIGS,
+  CONTAINER_NODE_CONFIGS,
+  isContainerVariant,
 } from '../../types';
 
 // ---------------------------------------------------------------------------
@@ -174,6 +179,53 @@ function DeleteButton({ onClick }: { onClick: () => void }) {
 }
 
 // ---------------------------------------------------------------------------
+// Color preset picker component
+// ---------------------------------------------------------------------------
+
+function ColorPresetPicker({
+  color,
+  borderColor,
+  onColorChange,
+  onBorderChange,
+  onPresetSelect,
+}: {
+  color: string;
+  borderColor: string;
+  onColorChange: (v: string) => void;
+  onBorderChange: (v: string) => void;
+  onPresetSelect: (preset: PresetColor) => void;
+}) {
+  return (
+    <div>
+      <FieldGroup>
+        <FieldLabel>배경색</FieldLabel>
+        <ColorInput value={color} onChange={onColorChange} />
+      </FieldGroup>
+
+      <FieldGroup>
+        <FieldLabel>테두리색</FieldLabel>
+        <ColorInput value={borderColor} onChange={onBorderChange} />
+      </FieldGroup>
+
+      <FieldGroup>
+        <FieldLabel>프리셋 색상</FieldLabel>
+        <div className="flex flex-wrap gap-1.5">
+          {PREDEFINED_COLORS.map((preset) => (
+            <button
+              key={preset.name}
+              onClick={() => onPresetSelect(preset)}
+              title={preset.name}
+              className="w-6 h-6 rounded-md border-2 hover:scale-110 transition-transform cursor-pointer"
+              style={{ backgroundColor: preset.bg, borderColor: preset.border }}
+            />
+          ))}
+        </div>
+      </FieldGroup>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Node editor panel
 // ---------------------------------------------------------------------------
 
@@ -182,10 +234,14 @@ function NodeEditor({ nodeId }: { nodeId: string }) {
   const updateNode = useStore((s) => s.updateNode);
   const deleteNode = useStore((s) => s.deleteNode);
   const selectNode = useStore((s) => s.selectNode);
+  const getChildNodes = useStore((s) => s.getChildNodes);
 
   if (!node) return null;
 
   const d = node.data;
+  const isContainer = isContainerVariant(d.nodeVariant);
+  const isZoneContainer = d.nodeVariant === 'zone';
+  const childCount = isContainer ? getChildNodes(nodeId).length : 0;
 
   const upd = (partial: Partial<ServerData>) => updateNode(nodeId, partial);
 
@@ -196,66 +252,76 @@ function NodeEditor({ nodeId }: { nodeId: string }) {
     { value: 'STG', label: 'STG (스테이징)' },
   ];
 
-  const variantOptions: { value: NodeVariant; label: string }[] = [
-    { value: 'physical', label: '물리 서버' },
-    { value: 'vm', label: '가상 머신' },
-    { value: 'db', label: 'DB 서버' },
-    { value: 'was', label: 'WAS 서버' },
-    { value: 'web', label: '웹 서버' },
-    { value: 'firewall', label: '방화벽' },
-    { value: 'lb', label: '로드밸런서' },
-    { value: 'client', label: '클라이언트' },
-    { value: 'external', label: '외부 시스템' },
-    { value: 'custom', label: '사용자 정의' },
-  ];
+  const serverVariantOptions: { value: NodeVariant; label: string }[] = SERVER_NODE_CONFIGS.map(
+    (c) => ({ value: c.variant, label: c.label })
+  );
+
+  const containerVariantOptions: { value: NodeVariant; label: string }[] = CONTAINER_NODE_CONFIGS.map(
+    (c) => ({ value: c.variant, label: c.label })
+  );
+
+  const variantOptions = isContainer ? containerVariantOptions : serverVariantOptions;
+
+  const titleIcon = isContainer
+    ? (d.nodeVariant === 'zone' ? '🔲' : d.nodeVariant === 'firewall' ? '🛡️' : '💻')
+    : '🖥️';
+
+  const titleText = isContainer ? '컨테이너 편집' : '서버 노드 편집';
 
   return (
     <div>
-      <SectionTitle>서버 노드 편집</SectionTitle>
+      <SectionTitle>{titleIcon} {titleText}</SectionTitle>
 
+      {/* Label — shown for all node types */}
       <FieldGroup>
         <FieldLabel>서버명 (노드 타이틀) *</FieldLabel>
         <TextInput value={d.label} onChange={(v) => upd({ label: v })} placeholder="서버명" />
       </FieldGroup>
 
-      <FieldGroup>
-        <FieldLabel>호스트명 (Hostname) *</FieldLabel>
-        <TextInput value={d.hostname} onChange={(v) => upd({ hostname: v })} placeholder="was01.internal.com" />
-      </FieldGroup>
+      {/* Fields shown only for non-zone containers and all server nodes */}
+      {!isZoneContainer && (
+        <>
+          <FieldGroup>
+            <FieldLabel>호스트명 (Hostname) *</FieldLabel>
+            <TextInput value={d.hostname} onChange={(v) => upd({ hostname: v })} placeholder="was01.internal.com" />
+          </FieldGroup>
 
-      <FieldGroup>
-        <FieldLabel>IP 주소 *</FieldLabel>
-        <StringListInput
-          values={d.ip}
-          onChange={(v) => upd({ ip: v })}
-          placeholder="10.0.1.20"
-          addLabel="IP 추가"
-        />
-      </FieldGroup>
+          <FieldGroup>
+            <FieldLabel>IP 주소 *</FieldLabel>
+            <StringListInput
+              values={d.ip}
+              onChange={(v) => upd({ ip: v })}
+              placeholder="10.0.1.20"
+              addLabel="IP 추가"
+            />
+          </FieldGroup>
 
-      <FieldGroup>
-        <FieldLabel>OS 종류 및 버전 *</FieldLabel>
-        <TextInput value={d.os} onChange={(v) => upd({ os: v })} placeholder="RHEL 8.6" />
-      </FieldGroup>
+          <FieldGroup>
+            <FieldLabel>OS 종류 및 버전 *</FieldLabel>
+            <TextInput value={d.os} onChange={(v) => upd({ os: v })} placeholder="RHEL 8.6" />
+          </FieldGroup>
 
-      <FieldGroup>
-        <FieldLabel>DB 종류 및 버전</FieldLabel>
-        <TextInput value={d.db} onChange={(v) => upd({ db: v })} placeholder="Oracle 19c" />
-      </FieldGroup>
+          <FieldGroup>
+            <FieldLabel>DB 종류 및 버전</FieldLabel>
+            <TextInput value={d.db} onChange={(v) => upd({ db: v })} placeholder="Oracle 19c" />
+          </FieldGroup>
 
-      <FieldGroup>
-        <FieldLabel>SW / 미들웨어 버전</FieldLabel>
-        <TextInput value={d.sw} onChange={(v) => upd({ sw: v })} placeholder="Tomcat 9.0" />
-      </FieldGroup>
+          <FieldGroup>
+            <FieldLabel>SW / 미들웨어 버전</FieldLabel>
+            <TextInput value={d.sw} onChange={(v) => upd({ sw: v })} placeholder="Tomcat 9.0" />
+          </FieldGroup>
 
-      <FieldGroup>
-        <FieldLabel>CPU / Memory 사양</FieldLabel>
-        <TextInput value={d.cpu_memory} onChange={(v) => upd({ cpu_memory: v })} placeholder="16 Core / 64 GB" />
-      </FieldGroup>
+          <FieldGroup>
+            <FieldLabel>CPU / Memory 사양</FieldLabel>
+            <TextInput value={d.cpu_memory} onChange={(v) => upd({ cpu_memory: v })} placeholder="16 Core / 64 GB" />
+          </FieldGroup>
+        </>
+      )}
 
+      {/* Role field — labelled differently for zone containers */}
       <FieldGroup>
-        <FieldLabel>역할 / 설명</FieldLabel>
-        <TextInput value={d.role} onChange={(v) => upd({ role: v })} placeholder="주문 처리 WAS" />
+        <FieldLabel>{isZoneContainer ? '존 설명' : '역할 / 설명'}</FieldLabel>
+        <TextInput value={d.role} onChange={(v) => upd({ role: v })} placeholder={isZoneContainer ? '네트워크 존 설명' : '주문 처리 WAS'} />
       </FieldGroup>
 
       <FieldGroup>
@@ -268,6 +334,16 @@ function NodeEditor({ nodeId }: { nodeId: string }) {
       </FieldGroup>
 
       <FieldGroup>
+        <FieldLabel>태그</FieldLabel>
+        <StringListInput
+          values={d.tags.length > 0 ? d.tags : ['']}
+          onChange={(v) => upd({ tags: v.filter((t) => t.trim() !== '') })}
+          placeholder="태그 입력"
+          addLabel="태그 추가"
+        />
+      </FieldGroup>
+
+      <FieldGroup>
         <FieldLabel>노드 유형</FieldLabel>
         <SelectInput<NodeVariant>
           value={d.nodeVariant}
@@ -276,15 +352,28 @@ function NodeEditor({ nodeId }: { nodeId: string }) {
         />
       </FieldGroup>
 
-      <FieldGroup>
-        <FieldLabel>노드 배경색</FieldLabel>
-        <ColorInput value={d.color} onChange={(v) => upd({ color: v })} />
-      </FieldGroup>
+      {/* Color preset picker */}
+      <ColorPresetPicker
+        color={d.color}
+        borderColor={d.borderColor}
+        onColorChange={(v) => upd({ color: v })}
+        onBorderChange={(v) => upd({ borderColor: v })}
+        onPresetSelect={(preset) => upd({ color: preset.bg, borderColor: preset.border })}
+      />
 
-      <FieldGroup>
-        <FieldLabel>테두리 색상</FieldLabel>
-        <ColorInput value={d.borderColor} onChange={(v) => upd({ borderColor: v })} />
-      </FieldGroup>
+      {/* Container-specific info section */}
+      {isContainer && (
+        <FieldGroup>
+          <FieldLabel>컨테이너 크기</FieldLabel>
+          <div className="text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded px-2 py-1.5">
+            {node.style?.width ?? '-'} × {node.style?.height ?? '-'} px
+          </div>
+          <FieldLabel>포함된 노드</FieldLabel>
+          <div className="text-sm text-gray-600 bg-gray-50 border border-gray-200 rounded px-2 py-1.5">
+            {childCount}개
+          </div>
+        </FieldGroup>
+      )}
 
       <DeleteButton
         onClick={() => {

@@ -1,4 +1,44 @@
-import { NODE_TYPE_CONFIGS, type NodeTypeConfig } from '../../types';
+import {
+  CONTAINER_NODE_CONFIGS,
+  SERVER_NODE_CONFIGS,
+  type NodeTypeConfig,
+} from '../../types';
+
+function PaletteItem({
+  config,
+  isContainer,
+  onDragStart,
+}: {
+  config: NodeTypeConfig;
+  isContainer: boolean;
+  onDragStart: (e: React.DragEvent<HTMLDivElement>, config: NodeTypeConfig) => void;
+}) {
+  return (
+    <div
+      draggable
+      onDragStart={(e) => onDragStart(e, config)}
+      className="flex items-center gap-2 px-2 py-2 rounded-md cursor-grab
+                 hover:bg-gray-50 active:bg-gray-100 active:cursor-grabbing
+                 border border-transparent hover:border-gray-200
+                 transition-colors duration-100 select-none"
+      title={`${config.label} — 드래그하여 캔버스에 추가`}
+    >
+      {/* Color swatch — dashed border hint for containers */}
+      <span
+        className="inline-flex items-center justify-center w-6 h-6 rounded text-sm shrink-0"
+        style={{
+          background: config.defaultColor,
+          border: `1.5px ${isContainer ? 'dashed' : 'solid'} ${config.defaultBorderColor}`,
+        }}
+      >
+        {config.icon}
+      </span>
+      <span className="text-xs font-medium text-gray-700 truncate">
+        {config.label}
+      </span>
+    </div>
+  );
+}
 
 export default function NodePalette() {
   const handleDragStart = (
@@ -19,30 +59,45 @@ export default function NodePalette() {
       </div>
 
       {/* Node list */}
-      <div className="flex-1 overflow-y-auto py-2 px-2 space-y-1">
-        {NODE_TYPE_CONFIGS.map((config) => (
-          <div
-            key={config.variant}
-            draggable
-            onDragStart={(e) => handleDragStart(e, config)}
-            className="flex items-center gap-2 px-2 py-2 rounded-md cursor-grab
-                       hover:bg-gray-50 active:bg-gray-100 active:cursor-grabbing
-                       border border-transparent hover:border-gray-200
-                       transition-colors duration-100 select-none"
-            title={`${config.label} — 드래그하여 캔버스에 추가`}
-          >
-            {/* Color swatch */}
-            <span
-              className="inline-flex items-center justify-center w-6 h-6 rounded text-sm shrink-0"
-              style={{ background: config.defaultColor, border: `1.5px solid ${config.defaultBorderColor}` }}
-            >
-              {config.icon}
-            </span>
-            <span className="text-xs font-medium text-gray-700 truncate">
-              {config.label}
-            </span>
+      <div className="flex-1 overflow-y-auto py-2 px-2">
+
+        {/* ── 컨테이너 section ──────────────────────────────── */}
+        <div className="mb-1">
+          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide px-1 mb-1">
+            컨테이너
+          </p>
+          <div className="space-y-1">
+            {CONTAINER_NODE_CONFIGS.map((config) => (
+              <PaletteItem
+                key={config.variant}
+                config={config}
+                isContainer={true}
+                onDragStart={handleDragStart}
+              />
+            ))}
           </div>
-        ))}
+        </div>
+
+        {/* ── Divider ───────────────────────────────────────── */}
+        <div className="my-2 border-t border-gray-200" />
+
+        {/* ── 서버 노드 section ─────────────────────────────── */}
+        <div>
+          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide px-1 mb-1">
+            서버 노드
+          </p>
+          <div className="space-y-1">
+            {SERVER_NODE_CONFIGS.map((config) => (
+              <PaletteItem
+                key={config.variant}
+                config={config}
+                isContainer={false}
+                onDragStart={handleDragStart}
+              />
+            ))}
+          </div>
+        </div>
+
       </div>
 
       {/* Hint */}

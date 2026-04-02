@@ -10,6 +10,8 @@ import {
   type NodeVariant,
   createDefaultServerData,
   createDefaultEdgeData,
+  isContainerVariant,
+  CONTAINER_DEFAULT_SIZE,
 } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -46,17 +48,22 @@ export interface InfraStore {
   redo: () => void;
 
   // --- 노드 CRUD ---
-  addNode: (variant: NodeVariant, position: { x: number; y: number }) => string;
+  addNode: (variant: NodeVariant, position: { x: number; y: number }, parentId?: string) => string;
   updateNode: (id: string, data: Partial<ServerData>) => void;
   deleteNode: (id: string) => void;
   updateNodePosition: (id: string, position: { x: number; y: number }) => void;
+
+  // --- 컨테이너/부모-자식 ---
+  setNodeParent: (nodeId: string, parentId: string | null) => void;
+  resizeContainer: (id: string, width: number, height: number) => void;
+  getChildNodes: (parentId: string) => InfraNode[];
 
   // --- 엣지 CRUD ---
   addEdge: (source: string, target: string) => string;
   updateEdge: (id: string, data: Partial<EdgeData>) => void;
   deleteEdge: (id: string) => void;
 
-  // --- 존 CRUD ---
+  // --- 존 CRUD (레거시 호환) ---
   addZone: (label: string, position: { x: number; y: number }) => string;
   updateZone: (id: string, updates: Partial<Zone>) => void;
   deleteZone: (id: string) => void;
@@ -136,13 +143,18 @@ export const useStore = create<InfraStore>((set, get) => ({
   },
 
   // --- 노드 ---
-  addNode: (variant, position) => {
+  addNode: (variant, position, parentId) => {
     const id = `node-${uuidv4().slice(0, 8)}`;
+    const isContainer = isContainerVariant(variant);
     const node: InfraNode = {
       id,
-      type: 'serverNode',
+      type: isContainer ? 'containerNode' : 'serverNode',
       position,
       data: createDefaultServerData(variant),
+      ...(parentId ? { parentId } : {}),
+      ...(isContainer
+        ? { style: CONTAINER_DEFAULT_SIZE[variant] ?? { width: 500, height: 400 } }
+        : {}),
     };
     get().pushHistory();
     set(state => ({ nodes: [...state.nodes, node] }));
@@ -160,8 +172,11 @@ export const useStore = create<InfraStore>((set, get) => ({
 
   deleteNode: (id) => {
     get().pushHistory();
+    // 컨테이너 삭제 시 자식 노드의 parentId를 해제
     set(state => ({
-      nodes: state.nodes.filter(n => n.id !== id),
+      nodes: state.nodes
+        .filter(n => n.id !== id)
+        .map(n => n.parentId === id ? { ...n, parentId: undefined } : n),
       edges: state.edges.filter(e => e.source !== id && e.target !== id),
       selectedNodeId: state.selectedNodeId === id ? null : state.selectedNodeId,
     }));
@@ -173,6 +188,32 @@ export const useStore = create<InfraStore>((set, get) => ({
         n.id === id ? { ...n, position } : n
       ),
     }));
+  },
+
+  // --- 컨테이너/부모-자식 ---
+  setNodeParent: (nodeId, parentId) => {
+    get().pushHistory();
+    set(state => ({
+      nodes: state.nodes.map(n =>
+        n.id === nodeId
+          ? { ...n, parentId: parentId ?? undefined }
+          : n
+      ),
+    }));
+  },
+
+  resizeContainer: (id, width, height) => {
+    set(state => ({
+      nodes: state.nodes.map(n =>
+        n.id === id
+          ? { ...n, style: { ...n.style, width, height } }
+          : n
+      ),
+    }));
+  },
+
+  getChildNodes: (parentId) => {
+    return get().nodes.filter(n => n.parentId === parentId);
   },
 
   // --- 엣지 ---
@@ -207,7 +248,7 @@ export const useStore = create<InfraStore>((set, get) => ({
     }));
   },
 
-  // --- 존 ---
+  // --- 존 (레거시 호환) ---
   addZone: (label, position) => {
     const id = `zone-${uuidv4().slice(0, 8)}`;
     const zone: Zone = {
