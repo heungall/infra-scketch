@@ -3,6 +3,7 @@ import {
   SERVER_NODE_CONFIGS,
   type NodeTypeConfig,
 } from '../../types';
+import { getNodeIcon } from '../../utils/getNodeIcon';
 
 function PaletteItem({
   config,
@@ -31,7 +32,7 @@ function PaletteItem({
           border: `1.5px ${isContainer ? 'dashed' : 'solid'} ${config.defaultBorderColor}`,
         }}
       >
-        {config.icon}
+        {getNodeIcon(config.variant, 'w-4 h-4')}
       </span>
       <span className="text-xs font-medium text-gray-700 truncate">
         {config.label}

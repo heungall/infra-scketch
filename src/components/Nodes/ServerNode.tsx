@@ -1,6 +1,7 @@
 import { memo, useCallback } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import { NODE_TYPE_CONFIGS, type ServerData } from '../../types';
+import { getNodeIcon } from '../../utils/getNodeIcon';
 import { useStore } from '../../store/useStore';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -25,7 +26,7 @@ const handleStyle =
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 interface NodeHeaderProps {
-  icon: string;
+  icon: React.ReactNode;
   label: string;
   hostname: string;
   showHostname: boolean;
@@ -245,7 +246,7 @@ function ServerNode({ data, selected, id }: NodeProps<ServerNodeType>) {
         {/* Header row: icon + label + toggle button */}
         <div className="flex items-start justify-between gap-1">
           <NodeHeader
-            icon={config.icon}
+            icon={getNodeIcon(data.nodeVariant, 'w-4 h-4 inline-block')}
             label={data.label}
             hostname={data.hostname}
             showHostname={ds.showHostname}

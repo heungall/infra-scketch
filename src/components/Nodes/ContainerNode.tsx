@@ -1,6 +1,7 @@
 import { memo, useCallback, useRef, useState } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
 import { NODE_TYPE_CONFIGS, type ServerData } from '../../types';
+import { getNodeIcon } from '../../utils/getNodeIcon';
 import { useStore } from '../../store/useStore';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -163,7 +164,7 @@ function ContainerNode({ data, selected, id }: NodeProps<ContainerNodeType>) {
           onDoubleClick={startEdit}
         >
           {/* Icon */}
-          <span className="text-base leading-none shrink-0">{config.icon}</span>
+          <span className="text-base leading-none shrink-0">{getNodeIcon(data.nodeVariant, 'w-5 h-5')}</span>
 
           {/* Label (editable on double-click) */}
           {editing ? (

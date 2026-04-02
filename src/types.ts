@@ -223,23 +223,26 @@ export const DEFAULT_DISPLAY_SETTINGS: NodeDisplaySettings = {
 // ============================================================
 // 아이콘 시스템
 // ============================================================
-//
-// 기본값: 이모지 문자열 (NODE_TYPE_CONFIGS의 icon 필드)
-//
-// 커스텀 SVG 아이콘 사용법:
-// 1. src/assets/icons/ 폴더에 SVG 파일 추가 (예: vm.svg)
-// 2. 아래 CUSTOM_ICONS에 variant → import 매핑 추가:
-//
-//    import vmIcon from './assets/icons/vm.svg';
-//    CUSTOM_ICONS['vm'] = vmIcon;
-//
-// 3. 컴포넌트에서 getNodeIcon(variant) 호출하면 자동으로
-//    커스텀 아이콘이 있으면 <img>, 없으면 이모지 렌더링
+// 아이콘 출처: Flaticon - zero_wing
+// https://www.flaticon.com/kr/free-icons/
+// "방법 아이콘 제작자: zero_wing - Flaticon"
 // ============================================================
 
-/** variant별 커스텀 아이콘 URL 맵 (SVG import 결과) */
+import physicalIcon from './assets/icons/physical.png';
+import dbIcon from './assets/icons/db.png';
+import firewallIcon from './assets/icons/firewall.png';
+import vmIcon from './assets/icons/vm.png';
+import wasIcon from './assets/icons/was.png';
+import lbIcon from './assets/icons/lb.png';
+
+/** variant별 커스텀 아이콘 URL 맵 */
 export const CUSTOM_ICONS: Partial<Record<NodeVariant, string>> = {
-  // 예시: vm: vmIcon,
+  physical: physicalIcon,
+  db: dbIcon,
+  firewall: firewallIcon,
+  vm: vmIcon,
+  was: wasIcon,
+  lb: lbIcon,
 };
 
 // ============================================================
