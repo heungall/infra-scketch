@@ -8,10 +8,12 @@ import {
   type CanvasState,
   type DiagramData,
   type NodeVariant,
+  type NodeDisplaySettings,
   createDefaultServerData,
   createDefaultEdgeData,
   isContainerVariant,
   CONTAINER_DEFAULT_SIZE,
+  DEFAULT_DISPLAY_SETTINGS,
 } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -75,6 +77,10 @@ export interface InfraStore {
   // --- 캔버스 ---
   setCanvas: (canvas: Partial<CanvasState>) => void;
 
+  // --- 표시 설정 ---
+  displaySettings: NodeDisplaySettings;
+  updateDisplaySettings: (settings: Partial<NodeDisplaySettings>) => void;
+
   // --- 저장/불러오기 ---
   exportDiagram: () => DiagramData;
   importDiagram: (data: DiagramData) => void;
@@ -98,6 +104,15 @@ export const useStore = create<InfraStore>((set, get) => ({
 
   selectedNodeId: null,
   selectedEdgeId: null,
+
+  // --- 표시 설정 ---
+  displaySettings: { ...DEFAULT_DISPLAY_SETTINGS },
+
+  updateDisplaySettings: (settings) => {
+    set(state => ({
+      displaySettings: { ...state.displaySettings, ...settings },
+    }));
+  },
 
   // --- 히스토리 ---
   history: [{ nodes: [], edges: [], zones: [] }],

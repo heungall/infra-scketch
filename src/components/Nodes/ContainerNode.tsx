@@ -42,6 +42,7 @@ function ContainerNode({ data, selected, id }: NodeProps<ContainerNodeType>) {
   const updateNode = useStore((s) => s.updateNode);
   const resizeContainer = useStore((s) => s.resizeContainer);
   const pushHistory = useStore((s) => s.pushHistory);
+  const ds = useStore((s) => s.displaySettings);
 
   const config = getConfig(data.nodeVariant);
 
@@ -185,7 +186,7 @@ function ContainerNode({ data, selected, id }: NodeProps<ContainerNodeType>) {
           )}
 
           {/* env badge */}
-          {data.env && (
+          {ds.showEnv && data.env && (
             <span
               className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded font-semibold ${
                 ENV_COLORS[data.env] ?? 'bg-gray-100 text-gray-600'
@@ -196,13 +197,13 @@ function ContainerNode({ data, selected, id }: NodeProps<ContainerNodeType>) {
           )}
 
           {/* hostname / IP badges (meaningful for vm/firewall) */}
-          {data.hostname && (
+          {ds.showHostname && data.hostname && (
             <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded
                              bg-white/70 text-gray-600 border border-gray-200 truncate max-w-[100px]">
               {data.hostname}
             </span>
           )}
-          {firstIp && !data.hostname && (
+          {ds.showIp && firstIp && !data.hostname && (
             <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded
                              bg-blue-50 text-blue-700 border border-blue-200 font-mono">
               {firstIp}

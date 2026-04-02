@@ -174,6 +174,75 @@ export const PREDEFINED_COLORS: PresetColor[] = [
 ];
 
 // ============================================================
+// 노드 표시 필드 설정
+// ============================================================
+
+/** 노드 위에 어떤 정보를 표시할지 설정 */
+export interface NodeDisplaySettings {
+  showHostname: boolean;
+  showIp: boolean;
+  showOs: boolean;
+  showDb: boolean;
+  showSw: boolean;
+  showCpuMemory: boolean;
+  showRole: boolean;
+  showEnv: boolean;
+  showTags: boolean;
+}
+
+/** 표시 설정 필드 메타 (UI 렌더링용) */
+export interface DisplayFieldMeta {
+  key: keyof NodeDisplaySettings;
+  label: string;
+}
+
+export const DISPLAY_FIELD_OPTIONS: DisplayFieldMeta[] = [
+  { key: 'showHostname',  label: '호스트명' },
+  { key: 'showIp',        label: 'IP 주소' },
+  { key: 'showOs',        label: 'OS 정보' },
+  { key: 'showDb',        label: 'DB 정보' },
+  { key: 'showSw',        label: 'SW/미들웨어' },
+  { key: 'showCpuMemory', label: 'CPU/Memory' },
+  { key: 'showRole',      label: '역할' },
+  { key: 'showEnv',       label: '운영 환경' },
+  { key: 'showTags',      label: '태그' },
+];
+
+export const DEFAULT_DISPLAY_SETTINGS: NodeDisplaySettings = {
+  showHostname: true,
+  showIp: true,
+  showOs: true,
+  showDb: false,
+  showSw: false,
+  showCpuMemory: false,
+  showRole: false,
+  showEnv: true,
+  showTags: false,
+};
+
+// ============================================================
+// 아이콘 시스템
+// ============================================================
+//
+// 기본값: 이모지 문자열 (NODE_TYPE_CONFIGS의 icon 필드)
+//
+// 커스텀 SVG 아이콘 사용법:
+// 1. src/assets/icons/ 폴더에 SVG 파일 추가 (예: vm.svg)
+// 2. 아래 CUSTOM_ICONS에 variant → import 매핑 추가:
+//
+//    import vmIcon from './assets/icons/vm.svg';
+//    CUSTOM_ICONS['vm'] = vmIcon;
+//
+// 3. 컴포넌트에서 getNodeIcon(variant) 호출하면 자동으로
+//    커스텀 아이콘이 있으면 <img>, 없으면 이모지 렌더링
+// ============================================================
+
+/** variant별 커스텀 아이콘 URL 맵 (SVG import 결과) */
+export const CUSTOM_ICONS: Partial<Record<NodeVariant, string>> = {
+  // 예시: vm: vmIcon,
+};
+
+// ============================================================
 // 기본 데이터 생성 헬퍼
 // ============================================================
 

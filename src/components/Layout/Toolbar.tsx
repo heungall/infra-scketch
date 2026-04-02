@@ -1,6 +1,7 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { useStore } from '../../store/useStore';
+import DisplaySettingsModal from './DisplaySettingsModal';
 
 // ---------------------------------------------------------------------------
 // Reusable toolbar button
@@ -49,6 +50,7 @@ function Sep() {
 // ---------------------------------------------------------------------------
 export default function Toolbar() {
   const { zoomIn, zoomOut, fitView } = useReactFlow();
+  const [showSettings, setShowSettings] = useState(false);
 
   const historyIndex = useStore((s) => s.historyIndex);
   const historyLength = useStore((s) => s.history.length);
@@ -132,6 +134,9 @@ export default function Toolbar() {
         <ToolbarButton onClick={handleExportPng} title="PNG로 내보내기">
           📷 PNG
         </ToolbarButton>
+        <ToolbarButton onClick={() => setShowSettings(true)} title="표시 설정">
+          ⚙ Settings
+        </ToolbarButton>
 
         <Sep />
 
@@ -145,6 +150,8 @@ export default function Toolbar() {
           🗑️ Clear
         </ToolbarButton>
       </div>
+
+      <DisplaySettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
     </div>
   );
 }

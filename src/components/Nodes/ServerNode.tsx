@@ -28,9 +28,10 @@ interface NodeHeaderProps {
   icon: string;
   label: string;
   hostname: string;
+  showHostname: boolean;
 }
 
-function NodeHeader({ icon, label, hostname }: NodeHeaderProps) {
+function NodeHeader({ icon, label, hostname, showHostname }: NodeHeaderProps) {
   return (
     <div className="flex items-start gap-1.5">
       <span className="text-base leading-none mt-0.5 shrink-0">{icon}</span>
@@ -38,7 +39,7 @@ function NodeHeader({ icon, label, hostname }: NodeHeaderProps) {
         <div className="text-sm font-bold text-gray-800 leading-tight truncate">
           {label || '(이름 없음)'}
         </div>
-        {hostname && (
+        {showHostname && hostname && (
           <div className="text-[10px] text-gray-500 truncate mt-0.5">
             {hostname}
           </div>
@@ -71,19 +72,31 @@ function ToggleButton({ mode, onToggle }: ToggleButtonProps) {
 // ─── Summary mode body ────────────────────────────────────────────────────────
 interface SummaryBodyProps {
   data: ServerData;
+  showIp: boolean;
+  showOs: boolean;
+  showEnv: boolean;
 }
 
-function SummaryBody({ data }: SummaryBodyProps) {
+function SummaryBody({ data, showIp, showOs, showEnv }: SummaryBodyProps) {
   const firstIp = data.ip?.[0];
   return (
     <div className="mt-1.5 space-y-1">
-      {firstIp && (
+      {showEnv && data.env && (
+        <span
+          className={`inline-block text-[10px] px-1.5 py-0.5 rounded font-semibold ${
+            ENV_COLORS[data.env] ?? 'bg-gray-100 text-gray-600'
+          }`}
+        >
+          {data.env}
+        </span>
+      )}
+      {showIp && firstIp && (
         <span className="inline-block text-[10px] px-1.5 py-0.5 rounded
                          bg-blue-50 text-blue-700 border border-blue-200 font-mono">
           {firstIp}
         </span>
       )}
-      {data.os && (
+      {showOs && data.os && (
         <div className="text-[10px] text-gray-600 truncate">{data.os}</div>
       )}
     </div>
@@ -93,6 +106,15 @@ function SummaryBody({ data }: SummaryBodyProps) {
 // ─── Detail mode body ─────────────────────────────────────────────────────────
 interface DetailBodyProps {
   data: ServerData;
+  showHostname: boolean;
+  showIp: boolean;
+  showOs: boolean;
+  showDb: boolean;
+  showSw: boolean;
+  showCpuMemory: boolean;
+  showRole: boolean;
+  showEnv: boolean;
+  showTags: boolean;
 }
 
 interface FieldRow {
@@ -101,23 +123,34 @@ interface FieldRow {
   value: string;
 }
 
-function DetailBody({ data }: DetailBodyProps) {
+function DetailBody({
+  data,
+  showHostname,
+  showIp,
+  showOs,
+  showDb,
+  showSw,
+  showCpuMemory,
+  showRole,
+  showEnv,
+  showTags,
+}: DetailBodyProps) {
   const ipStr = data.ip?.filter(Boolean).join(', ');
 
   const fields: FieldRow[] = [
-    { key: 'hostname', label: '호스트명', value: data.hostname },
-    { key: 'ip',       label: 'IP',       value: ipStr ?? '' },
-    { key: 'os',       label: 'OS',       value: data.os },
-    { key: 'db',       label: 'DB',       value: data.db },
-    { key: 'sw',       label: 'SW',       value: data.sw },
-    { key: 'cpu',      label: 'CPU/MEM',  value: data.cpu_memory },
-    { key: 'role',     label: '역할',     value: data.role },
-  ].filter((f) => f.value);
+    showHostname ? { key: 'hostname', label: '호스트명', value: data.hostname } : null,
+    showIp       ? { key: 'ip',       label: 'IP',       value: ipStr ?? '' }    : null,
+    showOs       ? { key: 'os',       label: 'OS',       value: data.os }        : null,
+    showDb       ? { key: 'db',       label: 'DB',       value: data.db }        : null,
+    showSw       ? { key: 'sw',       label: 'SW',       value: data.sw }        : null,
+    showCpuMemory? { key: 'cpu',      label: 'CPU/MEM',  value: data.cpu_memory }: null,
+    showRole     ? { key: 'role',     label: '역할',     value: data.role }      : null,
+  ].filter((f): f is FieldRow => f !== null && Boolean(f.value));
 
   return (
     <div className="mt-2 space-y-1">
       {/* env badge */}
-      {data.env && (
+      {showEnv && data.env && (
         <span
           className={`inline-block text-[10px] px-1.5 py-0.5 rounded font-semibold ${
             ENV_COLORS[data.env] ?? 'bg-gray-100 text-gray-600'
@@ -136,7 +169,7 @@ function DetailBody({ data }: DetailBodyProps) {
       ))}
 
       {/* tags */}
-      {data.tags && data.tags.length > 0 && (
+      {showTags && data.tags && data.tags.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-1">
           {data.tags.filter(Boolean).map((tag) => (
             <span
@@ -155,6 +188,7 @@ function DetailBody({ data }: DetailBodyProps) {
 // ─── Main component ───────────────────────────────────────────────────────────
 function ServerNode({ data, selected, id }: NodeProps<ServerNodeType>) {
   const updateNode = useStore((s) => s.updateNode);
+  const ds = useStore((s) => s.displaySettings);
   const config = getConfig(data.nodeVariant);
 
   const toggleMode = useCallback(
@@ -214,15 +248,32 @@ function ServerNode({ data, selected, id }: NodeProps<ServerNodeType>) {
             icon={config.icon}
             label={data.label}
             hostname={data.hostname}
+            showHostname={ds.showHostname}
           />
           <ToggleButton mode={data.displayMode} onToggle={toggleMode} />
         </div>
 
         {/* Body */}
         {isDetail ? (
-          <DetailBody data={data} />
+          <DetailBody
+            data={data}
+            showHostname={ds.showHostname}
+            showIp={ds.showIp}
+            showOs={ds.showOs}
+            showDb={ds.showDb}
+            showSw={ds.showSw}
+            showCpuMemory={ds.showCpuMemory}
+            showRole={ds.showRole}
+            showEnv={ds.showEnv}
+            showTags={ds.showTags}
+          />
         ) : (
-          <SummaryBody data={data} />
+          <SummaryBody
+            data={data}
+            showIp={ds.showIp}
+            showOs={ds.showOs}
+            showEnv={ds.showEnv}
+          />
         )}
       </div>
     </>
