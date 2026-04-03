@@ -8,25 +8,19 @@ type ServerNodeType = Node<ServerData, 'serverNode'>;
 // ─── Handle style ────────────────────────────────────────────────────────────
 const handleStyle = 'w-2 h-2 bg-gray-400 border border-gray-500 rounded-full';
 
-// ─── Service row color logic ─────────────────────────────────────────────────
+// ─── 행 색상 규칙 ────────────────────────────────────────────────────────────
+// OS: 노란색 / DB: 연노랑 / 기타: 흰색 / IP: 회색
+
 function getServiceBg(svc: ServiceEntry): string {
-  const name = (svc.name + ' ' + (svc.sid ?? '')).toLowerCase();
-  // HANA DB → blue
-  if (name.includes('hana')) return 'bg-blue-600 text-white';
-  // ABAP → yellow
-  if (name.includes('abap') || svc.type === 'db') return 'bg-yellow-300 text-gray-900';
-  // Windows → dark teal
-  if (name.includes('windows')) return 'bg-teal-800 text-white';
-  // Default → white
+  if (svc.type === 'db') return 'bg-yellow-100 text-gray-900';
   return 'bg-white text-gray-800';
 }
 
-function getOsBg(os: string): string {
-  const lower = os.toLowerCase();
-  if (lower.includes('windows')) return 'bg-teal-800 text-white';
-  if (lower.includes('suse') || lower.includes('linux') || lower.includes('rhel')) return 'bg-yellow-300 text-gray-900';
-  return 'bg-gray-200 text-gray-800';
+function getOsBg(): string {
+  return 'bg-yellow-300 text-gray-900';
 }
+
+const IP_ROW_CLASS = 'bg-gray-200 text-gray-700';
 
 // ─── Main component ──────────────────────────────────────────────────────────
 function ServerNode({ data, selected, id }: NodeProps<ServerNodeType>) {
@@ -73,7 +67,7 @@ function ServerNode({ data, selected, id }: NodeProps<ServerNodeType>) {
           {/* IP addresses */}
           {ds.showIp && data.ip?.some(Boolean) && (
             data.ip.filter(Boolean).map((ip, i) => (
-              <div key={i} className="px-2 py-0.5 text-center font-mono text-gray-600 text-[10px]">
+              <div key={i} className={`px-2 py-0.5 text-center font-mono text-[10px] ${IP_ROW_CLASS}`}>
                 {ip}
               </div>
             ))
@@ -127,7 +121,7 @@ function ServerNode({ data, selected, id }: NodeProps<ServerNodeType>) {
 
           {/* OS - always at bottom with colored background */}
           {ds.showOs && data.os && (
-            <div className={`px-2 py-1 text-center font-medium ${getOsBg(data.os)}`}>
+            <div className={`px-2 py-1 text-center font-medium ${getOsBg()}`}>
               {data.os}
             </div>
           )}
