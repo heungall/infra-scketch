@@ -117,30 +117,7 @@ function InfraEdge(props: EdgeProps<InfraEdgeType>) {
         markerStart={markerStart}
       />
 
-      {hasLabel && (
-        <EdgeLabelRenderer>
-          <div
-            style={{
-              position: 'absolute',
-              transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
-              pointerEvents: 'all',
-            }}
-            className="nodrag nopan"
-          >
-            <div className="bg-white border border-gray-200 rounded px-2 py-1 shadow text-xs text-center whitespace-nowrap">
-              {label.trim() !== '' && (
-                <div className="font-semibold text-gray-700 leading-tight">{label}</div>
-              )}
-              {protocolPortLine.trim() !== '' && (
-                <div className="text-gray-500 leading-tight">{protocolPortLine}</div>
-              )}
-              {serviceLine !== '' && (
-                <div className="text-[10px] text-gray-400 leading-tight">{serviceLine}</div>
-              )}
-            </div>
-          </div>
-        </EdgeLabelRenderer>
-      )}
+      {/* 엣지 레이블 제거 — 연결 정보는 노드 서비스 행에서 확인 */}
     </>
   );
 }
