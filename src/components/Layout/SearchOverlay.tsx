@@ -15,7 +15,7 @@ export function nodeMatchesQuery(node: InfraNode, query: string): boolean {
     d.hostname.toLowerCase().includes(q) ||
     d.ip.some((ip) => ip.toLowerCase().includes(q)) ||
     d.os.toLowerCase().includes(q) ||
-    (d.services ?? []).some(s => s.name.toLowerCase().includes(q) || s.port.includes(q)) ||
+    (d.services ?? []).some(s => s.name.toLowerCase().includes(q) || s.port.includes(q) || (s.sid ?? '').toLowerCase().includes(q)) ||
     d.role.toLowerCase().includes(q) ||
     d.tags.some((tag) => tag.toLowerCase().includes(q))
   );

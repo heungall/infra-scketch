@@ -38,6 +38,7 @@ export interface ServiceEntry {
   type: ServiceType;
   name: string;
   port: string;
+  sid: string;
   description: string;
 }
 

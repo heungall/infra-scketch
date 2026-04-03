@@ -245,6 +245,7 @@ function ServiceListEditor({
       type: 'db',
       name: '',
       port: '',
+      sid: '',
       description: '',
     };
     onChange([...services, newSvc]);
@@ -267,37 +268,50 @@ function ServiceListEditor({
   return (
     <div className="space-y-1.5">
       {services.map((svc, idx) => (
-        <div key={svc.id} className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded px-1.5 py-1">
-          <select
-            value={svc.type}
-            onChange={(e) => updateService(idx, { type: e.target.value as ServiceType })}
-            className="w-16 text-xs border border-gray-300 rounded px-1 py-0.5 shrink-0"
-          >
-            {typeOptions.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-          <input
-            type="text"
-            value={svc.name}
-            onChange={(e) => updateService(idx, { name: e.target.value })}
-            placeholder="Oracle 19c"
-            className="flex-1 min-w-0 text-xs border border-gray-300 rounded px-1.5 py-0.5"
-          />
-          <input
-            type="text"
-            value={svc.port}
-            onChange={(e) => updateService(idx, { port: e.target.value })}
-            placeholder="1521"
-            className="w-14 text-xs border border-gray-300 rounded px-1.5 py-0.5 font-mono shrink-0"
-          />
-          <button
-            onClick={() => removeService(idx)}
-            className="text-red-400 hover:text-red-600 text-sm px-0.5 shrink-0"
-            title="삭제"
-          >
-            ×
-          </button>
+        <div key={svc.id} className="bg-gray-50 border border-gray-200 rounded px-1.5 py-1.5 space-y-1">
+          {/* 1행: 타입 + 이름 + 삭제 */}
+          <div className="flex items-center gap-1">
+            <select
+              value={svc.type}
+              onChange={(e) => updateService(idx, { type: e.target.value as ServiceType })}
+              className="w-16 text-xs border border-gray-300 rounded px-1 py-0.5 shrink-0"
+            >
+              {typeOptions.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+            <input
+              type="text"
+              value={svc.name}
+              onChange={(e) => updateService(idx, { name: e.target.value })}
+              placeholder="Oracle 19c"
+              className="flex-1 min-w-0 text-xs border border-gray-300 rounded px-1.5 py-0.5"
+            />
+            <button
+              onClick={() => removeService(idx)}
+              className="text-red-400 hover:text-red-600 text-sm px-0.5 shrink-0"
+              title="삭제"
+            >
+              ×
+            </button>
+          </div>
+          {/* 2행: 포트 + SID */}
+          <div className="flex items-center gap-1">
+            <input
+              type="text"
+              value={svc.port}
+              onChange={(e) => updateService(idx, { port: e.target.value })}
+              placeholder="포트 (1521)"
+              className="w-20 text-xs border border-gray-300 rounded px-1.5 py-0.5 font-mono shrink-0"
+            />
+            <input
+              type="text"
+              value={svc.sid ?? ''}
+              onChange={(e) => updateService(idx, { sid: e.target.value })}
+              placeholder="SID (ORCL)"
+              className="flex-1 min-w-0 text-xs border border-gray-300 rounded px-1.5 py-0.5 font-mono"
+            />
+          </div>
         </div>
       ))}
       <button

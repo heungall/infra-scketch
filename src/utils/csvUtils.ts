@@ -49,7 +49,7 @@ const CSV_HEADER_KO: Record<string, string> = {
   ip:          'IP 주소 (복수 시 세미콜론 구분)',
   type:        '노드 유형 (was/db/web/fw/lb/vm/physical/external/custom/zone)',
   os:          'OS 종류 및 버전',
-  services:    '서비스 목록 (type:name:port 형식, 세미콜론 구분)',
+  services:    '서비스 목록 (type:name:port:sid 형식, 세미콜론 구분)',
   cpu_memory:  'CPU/Memory 사양',
   role:        '서버 역할 설명',
   env:         '운영 환경 (PRD/DEV/STG)',
@@ -90,7 +90,7 @@ export function exportServerListAsCsv() {
     }
 
     const servicesStr = (d.services ?? [])
-      .map(s => `${s.type}:${s.name}:${s.port}`)
+      .map(s => `${s.type}:${s.name}:${s.port}${s.sid ? ':' + s.sid : ''}`)
       .join(';');
 
     const row = [
@@ -139,7 +139,7 @@ export function downloadCsvTemplate() {
     '10.0.1.20;10.0.1.21',
     'was',
     'RHEL 8.6',
-    'middleware:Tomcat 9.0:8080;db:Oracle 19c:1521',
+    'middleware:Tomcat 9.0:8080;db:Oracle 19c:1521:ORCL',
     '16 Core / 64 GB',
     '주문 처리 WAS',
     'PRD',
@@ -155,7 +155,7 @@ export function downloadCsvTemplate() {
     '10.0.1.10',
     'db',
     'RHEL 8.6',
-    'db:Oracle 19c:1521',
+    'db:Oracle 19c:1521:ORCL',
     '32 Core / 128 GB',
     '메인 운영 DB',
     'PRD',
@@ -434,12 +434,13 @@ export function importCsvRows(rows: ParsedCsvRow[], options: ImportOptions) {
     nodeData.ip         = d.ip.split(';').map(s => s.trim()).filter(Boolean);
     nodeData.os         = d.os;
     nodeData.services   = (d.services ?? '').split(';').filter(Boolean).map(s => {
-      const [type, name, port] = s.split(':');
+      const parts = s.split(':');
       return {
         id: `svc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-        type: (type ?? 'custom') as ServiceEntry['type'],
-        name: name ?? '',
-        port: port ?? '',
+        type: (parts[0] ?? 'custom') as ServiceEntry['type'],
+        name: parts[1] ?? '',
+        port: parts[2] ?? '',
+        sid: parts[3] ?? '',
         description: '',
       } satisfies ServiceEntry;
     });

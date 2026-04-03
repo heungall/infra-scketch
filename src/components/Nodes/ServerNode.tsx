@@ -106,7 +106,7 @@ function SummaryBody({ data, showIp, showOs, showEnv, showServices }: SummaryBod
         <div className="space-y-0.5">
           {services.slice(0, 2).map((svc) => (
             <div key={svc.id} className="text-[10px] text-gray-600 truncate">
-              {SERVICE_TYPE_ICONS[svc.type]}{svc.name}{svc.port ? ` :${svc.port}` : ''}
+              {SERVICE_TYPE_ICONS[svc.type]}{svc.name}{svc.port ? ` :${svc.port}` : ''}{svc.sid ? ` (${svc.sid})` : ''}
             </div>
           ))}
         </div>
@@ -183,7 +183,7 @@ function DetailBody({
           {services.map((svc) => (
             <div key={svc.id} className="flex items-center justify-between gap-1 text-[10px] leading-snug">
               <span className="text-gray-700 truncate">
-                {SERVICE_TYPE_ICONS[svc.type]}{svc.name}
+                {SERVICE_TYPE_ICONS[svc.type]}{svc.name}{svc.sid ? ` (${svc.sid})` : ''}
               </span>
               {svc.port && (
                 <span className="shrink-0 font-mono text-gray-500 bg-gray-100 px-1 rounded border border-gray-200">
