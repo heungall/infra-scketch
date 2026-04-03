@@ -290,8 +290,20 @@ export default function Canvas() {
         visible = anyDescendantVisible(n.id);
       }
 
-      const opacity = isFilterActive && !visible ? 0.15 : 1;
+      const dimmed = isFilterActive && !visible;
       const isMatch = isFilterActive && visible && n.type !== 'containerNode';
+
+      // Only apply filter-related styles when a filter is actually active
+      const filterStyle = isFilterActive
+        ? {
+            opacity: dimmed ? 0.15 : 1,
+            transition: 'opacity 0.2s',
+            boxShadow: isMatch
+              ? '0 0 0 3px #3B82F6, 0 0 12px 2px rgba(59,130,246,0.4)'
+              : undefined,
+            borderRadius: isMatch ? '8px' : undefined,
+          }
+        : {};
 
       return {
         id: n.id,
@@ -302,13 +314,7 @@ export default function Canvas() {
         selected: selectedSet.has(n.id),
         style: {
           ...n.style,
-          opacity,
-          transition: 'opacity 0.2s',
-          // Add a glowing ring for matching server nodes via box-shadow
-          boxShadow: isMatch
-            ? '0 0 0 3px #3B82F6, 0 0 12px 2px rgba(59,130,246,0.4)'
-            : undefined,
-          borderRadius: isMatch ? '8px' : undefined,
+          ...filterStyle,
         },
         // Containers should NOT be constrained to their parent's bounds — they
         // are resizable and may intentionally overflow. Non-container children

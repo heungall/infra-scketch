@@ -440,6 +440,9 @@ export const useStore = create<InfraStore>((set, get) => ({
       selectedNodeIds: [],
       selectedNodeId: null,
       selectedEdgeId: null,
+      searchQuery: '',
+      showSearch: false,
+      envFilter: 'all' as const,
       history: [{ nodes: data.nodes || [], edges: data.edges || [], zones: data.zones || [] }],
       historyIndex: 0,
     });
@@ -453,6 +456,9 @@ export const useStore = create<InfraStore>((set, get) => ({
       selectedNodeIds: [],
       selectedNodeId: null,
       selectedEdgeId: null,
+      searchQuery: '',
+      showSearch: false,
+      envFilter: 'all' as const,
       history: [{ nodes: [], edges: [], zones: [] }],
       historyIndex: 0,
     });
