@@ -1,10 +1,33 @@
 import PF from 'pathfinding';
 import type { InfraNode } from '../types';
+import { useStore } from '../store/useStore';
 
 const CELL = 10;
 const PAD  = 20;
 
 interface Rect { x: number; y: number; w: number; h: number }
+
+/** Estimate rendered height of a server node based on its content + display settings */
+function estimateNodeHeight(node: InfraNode): number {
+  const ds = useStore.getState().displaySettings;
+  const d = node.data;
+
+  // Container nodes have explicit style size
+  if (node.style?.height) return node.style.height;
+
+  let h = 30; // title bar
+  if (ds.showHostname && d.hostname) h += 24;
+  const ipCount = d.ip?.filter(Boolean).length ?? 0;
+  if (ds.showIp && ipCount > 0) h += ipCount * 18;
+  const svcCount = (d.services ?? []).length;
+  if (ds.showServices && svcCount > 0) h += svcCount * 26;
+  if (ds.showEnv && d.env) h += 18;
+  if (ds.showCpuMemory && d.cpu_memory) h += 18;
+  if (ds.showRole && d.role) h += 18;
+  if (ds.showTags && d.tags?.filter(Boolean).length) h += 22;
+  if (ds.showOs && d.os) h += 26;
+  return Math.max(h, 50);
+}
 
 function getNodeRect(node: InfraNode, allNodes: InfraNode[]): Rect {
   let x = node.position.x;
@@ -17,8 +40,8 @@ function getNodeRect(node: InfraNode, allNodes: InfraNode[]): Rect {
     y += parent.position.y;
     cur = parent;
   }
-  const w = node.style?.width ?? 180;
-  const h = node.style?.height ?? 120;
+  const w = node.style?.width ?? 190;
+  const h = estimateNodeHeight(node);
   return { x, y, w, h };
 }
 
