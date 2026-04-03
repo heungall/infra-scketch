@@ -134,9 +134,10 @@ export function computeAvoidingPath(
   const midY = (sy + ty) / 2;
   const fallback = `M ${sx} ${sy} L ${midX} ${sy} L ${midX} ${ty} L ${tx} ${ty}`;
 
-  // Collect obstacles (all server nodes including source/target)
+  // Collect obstacles (exclude source/target — handles are at the node boundary)
   const obstacles: Rect[] = [];
   for (const n of allNodes) {
+    if (n.id === sourceNodeId || n.id === targetNodeId) continue;
     if (n.type === 'containerNode') continue;
     obstacles.push(getNodeRect(n, allNodes));
   }
