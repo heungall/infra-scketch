@@ -623,6 +623,18 @@ function EdgeEditor({ edgeId }: { edgeId: string }) {
       </FieldGroup>
 
       <FieldGroup>
+        <FieldLabel>선 굵기 ({d.strokeWidth ?? 1}px)</FieldLabel>
+        <input
+          type="range"
+          min={1}
+          max={6}
+          value={d.strokeWidth ?? 1}
+          onChange={(e) => upd({ strokeWidth: Number(e.target.value) })}
+          className="w-full"
+        />
+      </FieldGroup>
+
+      <FieldGroup>
         <FieldLabel>선 색상</FieldLabel>
         <ColorInput value={d.color} onChange={(v) => upd({ color: v })} />
       </FieldGroup>

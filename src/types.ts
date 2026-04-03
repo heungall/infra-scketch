@@ -101,6 +101,7 @@ export interface EdgeData {
   direction: EdgeDirection;
   lineStyle: EdgeLineStyle;
   color: string;
+  strokeWidth: number;
   /** 소스 노드의 연결 서비스 ID */
   sourceServiceId?: string;
   /** 타겟 노드의 연결 서비스 ID */
@@ -313,8 +314,9 @@ export function createDefaultEdgeData(): EdgeData {
     protocol: '',
     ports: [],
     description: '',
-    direction: 'unidirectional',
+    direction: 'none',
     lineStyle: 'solid',
     color: '#666666',
+    strokeWidth: 1,
   };
 }
