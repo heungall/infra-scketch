@@ -1,12 +1,12 @@
+import { useMemo } from 'react';
 import {
   type EdgeProps,
   type Edge,
-  getSmoothStepPath,
-  EdgeLabelRenderer,
   BaseEdge,
 } from '@xyflow/react';
 import { type EdgeData } from '../../types';
 import { useStore } from '../../store/useStore';
+import { computeAvoidingPath } from '../../utils/edgeRouting';
 
 type InfraEdgeType = Edge<EdgeData, 'infraEdge'>;
 
@@ -17,39 +17,31 @@ function InfraEdge(props: EdgeProps<InfraEdgeType>) {
     sourceY,
     targetX,
     targetY,
-    sourcePosition,
-    targetPosition,
     selected,
     data,
   } = props;
 
   const nodes = useStore((s) => s.nodes);
-  const sourceNode = nodes.find(n => n.id === props.source);
-  const targetNode = nodes.find(n => n.id === props.target);
-  const sourceSvc = sourceNode?.data.services?.find(s => s.id === data?.sourceServiceId);
-  const targetSvc = targetNode?.data.services?.find(s => s.id === data?.targetServiceId);
 
   const color = data?.color ?? '#666666';
   const lineStyle = data?.lineStyle ?? 'solid';
-  const direction = data?.direction ?? 'unidirectional';
-  const label = data?.label ?? '';
-  const protocol = data?.protocol ?? '';
-  const ports = data?.ports ?? [];
+  const direction = data?.direction ?? 'none';
 
   const baseWidth = data?.strokeWidth ?? 1;
   const strokeWidth = selected ? baseWidth + 1 : baseWidth;
   const strokeDasharray = lineStyle === 'dashed' ? '5,5' : undefined;
 
-  // Orthogonal (right-angle) path
-  const [edgePath, labelX, labelY] = getSmoothStepPath({
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
-    borderRadius: 0,
-  });
+  // Obstacle-avoiding orthogonal path
+  const edgePath = useMemo(
+    () => computeAvoidingPath(
+      sourceX, sourceY,
+      targetX, targetY,
+      props.source,
+      props.target,
+      nodes,
+    ),
+    [sourceX, sourceY, targetX, targetY, props.source, props.target, nodes],
+  );
 
   const markerEndId = `arrow-end-${id}`;
   const markerStartId = `arrow-start-${id}`;
@@ -61,19 +53,6 @@ function InfraEdge(props: EdgeProps<InfraEdgeType>) {
 
   const markerStart =
     direction === 'bidirectional' ? `url(#${markerStartId})` : undefined;
-
-  // Build label
-  const portString = ports.length > 0 ? ports.join(', ') : '';
-  const protocolPortLine =
-    protocol && portString
-      ? `${protocol}:${portString}`
-      : protocol || (portString ? `포트: ${portString}` : '');
-
-  const serviceLine = sourceSvc || targetSvc
-    ? `${sourceSvc?.name ?? '?'} → ${targetSvc?.name ?? '?'}`
-    : '';
-
-  const hasLabel = label.trim() !== '' || protocolPortLine.trim() !== '' || serviceLine !== '';
 
   return (
     <>
@@ -117,8 +96,6 @@ function InfraEdge(props: EdgeProps<InfraEdgeType>) {
         markerEnd={markerEnd}
         markerStart={markerStart}
       />
-
-      {/* 엣지 레이블 제거 — 연결 정보는 노드 서비스 행에서 확인 */}
     </>
   );
 }
