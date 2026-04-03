@@ -57,10 +57,9 @@ export function computeAvoidingPath(
   const fallbackH = `M ${sx} ${sy} L ${midX} ${sy} L ${midX} ${ty} L ${tx} ${ty}`;
   const fallbackV = `M ${sx} ${sy} L ${sx} ${midY} L ${tx} ${midY} L ${tx} ${ty}`;
 
-  // Collect obstacle rects (exclude source, target, containers)
+  // Collect obstacle rects (include source/target — line should not cross over them either)
   const obstacles: Rect[] = [];
   for (const n of allNodes) {
-    if (n.id === sourceNodeId || n.id === targetNodeId) continue;
     if (n.type === 'containerNode') continue;
     obstacles.push(getNodeRect(n, allNodes));
   }
