@@ -154,16 +154,16 @@ export interface NodeTypeConfig {
   isContainer: boolean;
 }
 
-/** 서버 노드 유형 설정 */
+/** 서버 노드 유형 설정 — borderColor가 타이틀 바 색상으로 사용됨 */
 export const SERVER_NODE_CONFIGS: NodeTypeConfig[] = [
-  { variant: 'physical',  label: '물리 서버',     icon: '🖥️', defaultColor: '#E8EAF6', defaultBorderColor: '#3F51B5', isContainer: false },
-  { variant: 'db',        label: 'DB 서버',       icon: '🗄️', defaultColor: '#FFF3E0', defaultBorderColor: '#FF9800', isContainer: false },
-  { variant: 'was',       label: 'WAS 서버',      icon: '⚙️', defaultColor: '#E8F5E9', defaultBorderColor: '#4CAF50', isContainer: false },
-  { variant: 'web',       label: '웹 서버',       icon: '🌐', defaultColor: '#E0F7FA', defaultBorderColor: '#00BCD4', isContainer: false },
-  { variant: 'lb',        label: '로드밸런서',    icon: '⚖️', defaultColor: '#F3E5F5', defaultBorderColor: '#9C27B0', isContainer: false },
-  { variant: 'client',    label: '클라이언트',    icon: '👤', defaultColor: '#ECEFF1', defaultBorderColor: '#607D8B', isContainer: false },
-  { variant: 'external',  label: '외부 시스템',   icon: '☁️', defaultColor: '#FFF9C4', defaultBorderColor: '#FBC02D', isContainer: false },
-  { variant: 'custom',    label: '사용자 정의',   icon: '📦', defaultColor: '#F5F5F5', defaultBorderColor: '#9E9E9E', isContainer: false },
+  { variant: 'physical',  label: '물리 서버',     icon: '🖥️', defaultColor: '#FFFFFF', defaultBorderColor: '#1565C0', isContainer: false },
+  { variant: 'db',        label: 'DB 서버',       icon: '🗄️', defaultColor: '#FFFFFF', defaultBorderColor: '#1565C0', isContainer: false },
+  { variant: 'was',       label: 'WAS 서버',      icon: '⚙️', defaultColor: '#FFFFFF', defaultBorderColor: '#1565C0', isContainer: false },
+  { variant: 'web',       label: '웹 서버',       icon: '🌐', defaultColor: '#FFFFFF', defaultBorderColor: '#0277BD', isContainer: false },
+  { variant: 'lb',        label: '로드밸런서',    icon: '⚖️', defaultColor: '#FFFFFF', defaultBorderColor: '#6A1B9A', isContainer: false },
+  { variant: 'client',    label: '클라이언트',    icon: '👤', defaultColor: '#FFFFFF', defaultBorderColor: '#455A64', isContainer: false },
+  { variant: 'external',  label: '외부 시스템',   icon: '☁️', defaultColor: '#FFFFFF', defaultBorderColor: '#E65100', isContainer: false },
+  { variant: 'custom',    label: '사용자 정의',   icon: '📦', defaultColor: '#FFFFFF', defaultBorderColor: '#616161', isContainer: false },
 ];
 
 /** 컨테이너 노드 유형 설정 */
@@ -190,20 +190,22 @@ export interface PresetColor {
 }
 
 export const PREDEFINED_COLORS: PresetColor[] = [
-  { name: '파란색',   bg: '#E3F2FD', border: '#2196F3' },
-  { name: '남색',     bg: '#E8EAF6', border: '#3F51B5' },
-  { name: '초록색',   bg: '#E8F5E9', border: '#4CAF50' },
-  { name: '연두색',   bg: '#F1F8E9', border: '#8BC34A' },
-  { name: '청록색',   bg: '#E0F7FA', border: '#00BCD4' },
-  { name: '주황색',   bg: '#FFF3E0', border: '#FF9800' },
-  { name: '노란색',   bg: '#FFFDE7', border: '#FDD835' },
-  { name: '빨간색',   bg: '#FFEBEE', border: '#F44336' },
-  { name: '분홍색',   bg: '#FCE4EC', border: '#E91E63' },
-  { name: '보라색',   bg: '#F3E5F5', border: '#9C27B0' },
-  { name: '회색',     bg: '#ECEFF1', border: '#607D8B' },
-  { name: '갈색',     bg: '#EFEBE9', border: '#795548' },
-  { name: '흰색',     bg: '#FFFFFF', border: '#BDBDBD' },
-  { name: '진한 회색', bg: '#CFD8DC', border: '#455A64' },
+  // 진한 색상 (타이틀 바용)
+  { name: '진한 파랑', bg: '#FFFFFF', border: '#1565C0' },
+  { name: '진한 남색', bg: '#FFFFFF', border: '#283593' },
+  { name: '진한 초록', bg: '#FFFFFF', border: '#2E7D32' },
+  { name: '진한 빨강', bg: '#FFFFFF', border: '#C62828' },
+  { name: '진한 주황', bg: '#FFFFFF', border: '#E65100' },
+  { name: '진한 보라', bg: '#FFFFFF', border: '#6A1B9A' },
+  { name: '진한 청록', bg: '#FFFFFF', border: '#00695C' },
+  { name: '진한 회색', bg: '#FFFFFF', border: '#455A64' },
+  // 연한 색상 (컨테이너/배경용)
+  { name: '연한 파랑', bg: '#E3F2FD', border: '#1976D2' },
+  { name: '연한 초록', bg: '#E8F5E9', border: '#4CAF50' },
+  { name: '연한 노랑', bg: '#FFFDE7', border: '#F9A825' },
+  { name: '연한 빨강', bg: '#FFEBEE', border: '#E53935' },
+  { name: '연한 보라', bg: '#F3E5F5', border: '#9C27B0' },
+  { name: '연한 회색', bg: '#ECEFF1', border: '#607D8B' },
 ];
 
 // ============================================================
