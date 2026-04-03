@@ -489,7 +489,7 @@ export default function PropertyPanel() {
   const selectedEdgeId = useStore((s) => s.selectedEdgeId);
 
   return (
-    <div className="w-72 bg-white border-l border-gray-200 p-3 shrink-0 overflow-y-auto">
+    <div>
       {!selectedNodeId && !selectedEdgeId && (
         <div className="text-xs text-gray-400 mt-4 text-center">
           노드 또는 연결선을 선택하세요

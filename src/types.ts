@@ -106,6 +106,7 @@ export interface DiagramData {
   nodes: InfraNode[];
   edges: InfraEdge[];
   zones: Zone[];
+  displaySettings?: NodeDisplaySettings;
 }
 
 // ============================================================

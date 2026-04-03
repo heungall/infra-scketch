@@ -1,7 +1,12 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { useStore } from '../../store/useStore';
+import { saveDiagramAsHtml, loadDiagramFromHtml } from '../../utils/saveLoad';
 import DisplaySettingsModal from './DisplaySettingsModal';
+import CsvImportModal from './CsvImportModal';
+import { exportAsPng, exportAsSvg } from '../../utils/exportImage';
+import { exportAsJson, importFromJson } from '../../utils/exportJson';
+import { downloadCsvTemplate, exportServerListAsCsv } from '../../utils/csvUtils';
 
 // ---------------------------------------------------------------------------
 // Reusable toolbar button
@@ -46,11 +51,94 @@ function Sep() {
 }
 
 // ---------------------------------------------------------------------------
+// Export dropdown menu item
+// ---------------------------------------------------------------------------
+function MenuItem({
+  onClick,
+  children,
+}: {
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 active:bg-gray-200 whitespace-nowrap"
+    >
+      {children}
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Export dropdown
+// ---------------------------------------------------------------------------
+function ExportDropdown() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Close when clicking outside
+  useEffect(() => {
+    if (!open) return;
+    function handleOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, [open]);
+
+  // Close menu then run the action
+  function run(fn: () => void | Promise<void>) {
+    setOpen(false);
+    Promise.resolve(fn()).catch(() => {
+      // errors are surfaced via alert() inside each util
+    });
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        title="내보내기 / 가져오기"
+        className="px-2 py-1 text-sm rounded transition-colors text-gray-700 hover:bg-gray-100 active:bg-gray-200 flex items-center gap-1"
+      >
+        📤 Export ▾
+      </button>
+
+      {open && (
+        <div className="absolute right-0 mt-1 bg-white border border-gray-200 rounded shadow-lg z-50 py-1 min-w-[160px]">
+          {/* Image exports */}
+          <div className="px-4 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">
+            이미지
+          </div>
+          <MenuItem onClick={() => run(() => exportAsPng(1))}>📷 PNG (1x)</MenuItem>
+          <MenuItem onClick={() => run(() => exportAsPng(2))}>📷 PNG (2x)</MenuItem>
+          <MenuItem onClick={() => run(() => exportAsPng(4))}>📷 PNG (4x)</MenuItem>
+          <MenuItem onClick={() => run(() => exportAsSvg())}>🖼 SVG</MenuItem>
+
+          <div className="my-1 border-t border-gray-100" />
+
+          {/* JSON */}
+          <div className="px-4 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wide">
+            JSON
+          </div>
+          <MenuItem onClick={() => run(() => exportAsJson())}>⬇ JSON 내보내기</MenuItem>
+          <MenuItem onClick={() => run(() => importFromJson())}>⬆ JSON 가져오기</MenuItem>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Toolbar Component
 // ---------------------------------------------------------------------------
 export default function Toolbar() {
   const { zoomIn, zoomOut, fitView } = useReactFlow();
-  const [showSettings, setShowSettings] = useState(false);
+  const [showSettings, setShowSettings]     = useState(false);
+  const [showCsvImport, setShowCsvImport]   = useState(false);
 
   const historyIndex = useStore((s) => s.historyIndex);
   const historyLength = useStore((s) => s.history.length);
@@ -73,15 +161,15 @@ export default function Toolbar() {
   const handleFitView = useCallback(() => fitView({ duration: 300, padding: 0.2 }), [fitView]);
 
   const handleSaveHtml = useCallback(() => {
-    alert('HTML 저장 기능은 추후 구현됩니다.');
+    saveDiagramAsHtml();
   }, []);
 
   const handleLoadHtml = useCallback(() => {
-    alert('HTML 불러오기 기능은 추후 구현됩니다.');
-  }, []);
-
-  const handleExportPng = useCallback(() => {
-    alert('PNG 내보내기 기능은 추후 구현됩니다.');
+    loadDiagramFromHtml().catch((err) => {
+      if (err instanceof Error) {
+        alert(err.message);
+      }
+    });
   }, []);
 
   const handleClear = useCallback(() => {
@@ -124,16 +212,32 @@ export default function Toolbar() {
 
         <Sep />
 
-        {/* Save / Load / Export */}
+        {/* Save / Load */}
         <ToolbarButton onClick={handleSaveHtml} title="HTML로 저장">
           💾 Save
         </ToolbarButton>
         <ToolbarButton onClick={handleLoadHtml} title="HTML 불러오기">
           📂 Load
         </ToolbarButton>
-        <ToolbarButton onClick={handleExportPng} title="PNG로 내보내기">
-          📷 PNG
+
+        {/* Export dropdown (PNG / SVG / JSON) */}
+        <ExportDropdown />
+
+        <Sep />
+
+        {/* CSV section */}
+        <ToolbarButton onClick={() => downloadCsvTemplate()} title="CSV 양식 다운로드">
+          📋 CSV 양식
         </ToolbarButton>
+        <ToolbarButton onClick={() => setShowCsvImport(true)} title="CSV 서버 목록 가져오기">
+          ⬆ CSV 가져오기
+        </ToolbarButton>
+        <ToolbarButton onClick={() => exportServerListAsCsv()} disabled={!hasContent} title="서버 목록을 CSV로 내보내기">
+          ⬇ CSV 내보내기
+        </ToolbarButton>
+
+        <Sep />
+
         <ToolbarButton onClick={() => setShowSettings(true)} title="표시 설정">
           ⚙ Settings
         </ToolbarButton>
@@ -152,6 +256,7 @@ export default function Toolbar() {
       </div>
 
       <DisplaySettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
+      <CsvImportModal isOpen={showCsvImport} onClose={() => setShowCsvImport(false)} />
     </div>
   );
 }

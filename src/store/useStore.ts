@@ -303,13 +303,14 @@ export const useStore = create<InfraStore>((set, get) => ({
 
   // --- 저장/불러오기 ---
   exportDiagram: () => {
-    const { nodes, edges, zones, canvas } = get();
+    const { nodes, edges, zones, canvas, displaySettings } = get();
     return {
       version: '1.0',
       canvas,
       nodes: JSON.parse(JSON.stringify(nodes)),
       edges: JSON.parse(JSON.stringify(edges)),
       zones: JSON.parse(JSON.stringify(zones)),
+      displaySettings: { ...displaySettings },
     };
   },
 
@@ -319,6 +320,9 @@ export const useStore = create<InfraStore>((set, get) => ({
       edges: data.edges || [],
       zones: data.zones || [],
       canvas: data.canvas || { zoom: 1, position: { x: 0, y: 0 } },
+      displaySettings: data.displaySettings
+        ? { ...DEFAULT_DISPLAY_SETTINGS, ...data.displaySettings }
+        : { ...DEFAULT_DISPLAY_SETTINGS },
       selectedNodeId: null,
       selectedEdgeId: null,
       history: [{ nodes: data.nodes || [], edges: data.edges || [], zones: data.zones || [] }],
