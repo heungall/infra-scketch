@@ -84,7 +84,7 @@ export default function ServerListPanel() {
   const { fitView } = useReactFlow();
   const nodes      = useStore(s => s.nodes);
   const selectNode = useStore(s => s.selectNode);
-  const selectedNodeId = useStore(s => s.selectedNodeId);
+  const selectedNodeIds = useStore(s => s.selectedNodeIds);
 
   const [search, setSearch]   = useState('');
   const [sortBy, setSortBy]   = useState<SortKey>('label');
@@ -200,7 +200,7 @@ export default function ServerListPanel() {
           const d = node.data;
           const isContainer = containerIds.has(node.id);
           const hasParent = !!node.parentId;
-          const isSelected = node.id === selectedNodeId;
+          const isSelected = selectedNodeIds.includes(node.id);
           const firstIp = d.ip.find(Boolean) ?? '';
 
           return (

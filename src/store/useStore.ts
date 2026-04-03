@@ -9,6 +9,7 @@ import {
   type DiagramData,
   type NodeVariant,
   type NodeDisplaySettings,
+  type Environment,
   createDefaultServerData,
   createDefaultEdgeData,
   isContainerVariant,
@@ -39,6 +40,8 @@ export interface InfraStore {
   canvas: CanvasState;
 
   // --- 선택 상태 ---
+  selectedNodeIds: string[];
+  /** Convenience alias — first element of selectedNodeIds (or null) */
   selectedNodeId: string | null;
   selectedEdgeId: string | null;
 
@@ -72,7 +75,17 @@ export interface InfraStore {
 
   // --- 선택 ---
   selectNode: (id: string | null) => void;
+  toggleNodeSelection: (id: string) => void;
+  selectMultipleNodes: (ids: string[]) => void;
+  deleteSelectedNodes: () => void;
+  alignSelectedNodes: (direction: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => void;
   selectEdge: (id: string | null) => void;
+
+  // --- 그리드 ---
+  gridEnabled: boolean;
+  gridSize: number;
+  toggleGrid: () => void;
+  setGridSize: (size: number) => void;
 
   // --- 캔버스 ---
   setCanvas: (canvas: Partial<CanvasState>) => void;
@@ -80,6 +93,14 @@ export interface InfraStore {
   // --- 표시 설정 ---
   displaySettings: NodeDisplaySettings;
   updateDisplaySettings: (settings: Partial<NodeDisplaySettings>) => void;
+
+  // --- 검색 / 필터 ---
+  searchQuery: string;
+  setSearchQuery: (q: string) => void;
+  showSearch: boolean;
+  setShowSearch: (show: boolean) => void;
+  envFilter: Environment | 'all';
+  setEnvFilter: (env: Environment | 'all') => void;
 
   // --- 저장/불러오기 ---
   exportDiagram: () => DiagramData;
@@ -102,8 +123,17 @@ export const useStore = create<InfraStore>((set, get) => ({
   zones: [],
   canvas: { zoom: 1, position: { x: 0, y: 0 } },
 
+  selectedNodeIds: [],
   selectedNodeId: null,
   selectedEdgeId: null,
+
+  // --- 검색 / 필터 ---
+  searchQuery: '',
+  setSearchQuery: (q) => set({ searchQuery: q }),
+  showSearch: false,
+  setShowSearch: (show) => set({ showSearch: show }),
+  envFilter: 'all' as const,
+  setEnvFilter: (env) => set({ envFilter: env }),
 
   // --- 표시 설정 ---
   displaySettings: { ...DEFAULT_DISPLAY_SETTINGS },
@@ -137,6 +167,7 @@ export const useStore = create<InfraStore>((set, get) => ({
       edges: JSON.parse(JSON.stringify(snapshot.edges)),
       zones: JSON.parse(JSON.stringify(snapshot.zones)),
       historyIndex: newIndex,
+      selectedNodeIds: [],
       selectedNodeId: null,
       selectedEdgeId: null,
     });
@@ -152,6 +183,7 @@ export const useStore = create<InfraStore>((set, get) => ({
       edges: JSON.parse(JSON.stringify(snapshot.edges)),
       zones: JSON.parse(JSON.stringify(snapshot.zones)),
       historyIndex: newIndex,
+      selectedNodeIds: [],
       selectedNodeId: null,
       selectedEdgeId: null,
     });
@@ -188,13 +220,17 @@ export const useStore = create<InfraStore>((set, get) => ({
   deleteNode: (id) => {
     get().pushHistory();
     // 컨테이너 삭제 시 자식 노드의 parentId를 해제
-    set(state => ({
-      nodes: state.nodes
-        .filter(n => n.id !== id)
-        .map(n => n.parentId === id ? { ...n, parentId: undefined } : n),
-      edges: state.edges.filter(e => e.source !== id && e.target !== id),
-      selectedNodeId: state.selectedNodeId === id ? null : state.selectedNodeId,
-    }));
+    set(state => {
+      const newIds = state.selectedNodeIds.filter(nid => nid !== id);
+      return {
+        nodes: state.nodes
+          .filter(n => n.id !== id)
+          .map(n => n.parentId === id ? { ...n, parentId: undefined } : n),
+        edges: state.edges.filter(e => e.source !== id && e.target !== id),
+        selectedNodeIds: newIds,
+        selectedNodeId: newIds[0] ?? null,
+      };
+    });
   },
 
   updateNodePosition: (id, position) => {
@@ -295,8 +331,86 @@ export const useStore = create<InfraStore>((set, get) => ({
   },
 
   // --- 선택 ---
-  selectNode: (id) => set({ selectedNodeId: id, selectedEdgeId: null }),
-  selectEdge: (id) => set({ selectedEdgeId: id, selectedNodeId: null }),
+  selectNode: (id) => set({ selectedNodeIds: id ? [id] : [], selectedNodeId: id, selectedEdgeId: null }),
+  toggleNodeSelection: (id) => {
+    set(state => {
+      const ids = state.selectedNodeIds;
+      const next = ids.includes(id) ? ids.filter(nid => nid !== id) : [...ids, id];
+      return { selectedNodeIds: next, selectedNodeId: next[0] ?? null, selectedEdgeId: null };
+    });
+  },
+  selectMultipleNodes: (ids) => set({ selectedNodeIds: ids, selectedNodeId: ids[0] ?? null, selectedEdgeId: null }),
+  deleteSelectedNodes: () => {
+    const state = get();
+    const ids = state.selectedNodeIds;
+    if (ids.length === 0) return;
+    state.pushHistory();
+    const idSet = new Set(ids);
+    set(s => ({
+      nodes: s.nodes
+        .filter(n => !idSet.has(n.id))
+        .map(n => n.parentId && idSet.has(n.parentId) ? { ...n, parentId: undefined } : n),
+      edges: s.edges.filter(e => !idSet.has(e.source) && !idSet.has(e.target)),
+      selectedNodeIds: [],
+      selectedNodeId: null,
+    }));
+  },
+  alignSelectedNodes: (direction) => {
+    const state = get();
+    const ids = state.selectedNodeIds;
+    if (ids.length < 2) return;
+    const selected = state.nodes.filter(n => ids.includes(n.id));
+    if (selected.length < 2) return;
+
+    state.pushHistory();
+
+    let updater: (n: InfraNode) => { x: number; y: number };
+
+    switch (direction) {
+      case 'left': {
+        const minX = Math.min(...selected.map(n => n.position.x));
+        updater = (n) => ({ ...n.position, x: minX });
+        break;
+      }
+      case 'right': {
+        const maxX = Math.max(...selected.map(n => n.position.x));
+        updater = (n) => ({ ...n.position, x: maxX });
+        break;
+      }
+      case 'center': {
+        const avgX = selected.reduce((sum, n) => sum + n.position.x, 0) / selected.length;
+        updater = (n) => ({ ...n.position, x: Math.round(avgX) });
+        break;
+      }
+      case 'top': {
+        const minY = Math.min(...selected.map(n => n.position.y));
+        updater = (n) => ({ ...n.position, y: minY });
+        break;
+      }
+      case 'bottom': {
+        const maxY = Math.max(...selected.map(n => n.position.y));
+        updater = (n) => ({ ...n.position, y: maxY });
+        break;
+      }
+      case 'middle': {
+        const avgY = selected.reduce((sum, n) => sum + n.position.y, 0) / selected.length;
+        updater = (n) => ({ ...n.position, y: Math.round(avgY) });
+        break;
+      }
+    }
+
+    const idSet = new Set(ids);
+    set(s => ({
+      nodes: s.nodes.map(n => idSet.has(n.id) ? { ...n, position: updater(n) } : n),
+    }));
+  },
+  selectEdge: (id) => set({ selectedEdgeId: id, selectedNodeIds: [], selectedNodeId: null }),
+
+  // --- 그리드 ---
+  gridEnabled: false,
+  gridSize: 20,
+  toggleGrid: () => set(state => ({ gridEnabled: !state.gridEnabled })),
+  setGridSize: (size) => set({ gridSize: size }),
 
   // --- 캔버스 ---
   setCanvas: (canvas) => set(state => ({ canvas: { ...state.canvas, ...canvas } })),
@@ -323,6 +437,7 @@ export const useStore = create<InfraStore>((set, get) => ({
       displaySettings: data.displaySettings
         ? { ...DEFAULT_DISPLAY_SETTINGS, ...data.displaySettings }
         : { ...DEFAULT_DISPLAY_SETTINGS },
+      selectedNodeIds: [],
       selectedNodeId: null,
       selectedEdgeId: null,
       history: [{ nodes: data.nodes || [], edges: data.edges || [], zones: data.zones || [] }],
@@ -335,6 +450,7 @@ export const useStore = create<InfraStore>((set, get) => ({
       nodes: [],
       edges: [],
       zones: [],
+      selectedNodeIds: [],
       selectedNodeId: null,
       selectedEdgeId: null,
       history: [{ nodes: [], edges: [], zones: [] }],

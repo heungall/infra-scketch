@@ -84,7 +84,7 @@ export default function App() {
             </div>
 
             {/* 패널 본문 */}
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto panel-scroll">
               {rightTab === 'property' ? (
                 <div className="p-3">
                   <PropertyPanel />

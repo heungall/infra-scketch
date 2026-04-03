@@ -5,12 +5,14 @@ import {
   Controls,
   Background,
   BackgroundVariant,
+  SelectionMode,
   useReactFlow,
   type Node,
   type Edge,
   type OnNodesChange,
   type OnEdgesChange,
   type OnConnect,
+  type OnSelectionChangeFunc,
   type Connection,
   type NodeMouseHandler,
   type EdgeMouseHandler,
@@ -19,6 +21,7 @@ import {
 import ServerNode from '../Nodes/ServerNode';
 import ContainerNode from '../Nodes/ContainerNode';
 import InfraEdgeComponent from '../Edges/InfraEdge';
+import SearchOverlay, { nodeMatchesQuery } from '../Layout/SearchOverlay';
 import { useStore } from '../../store/useStore';
 import type {
   NodeVariant,
@@ -221,44 +224,105 @@ export default function Canvas() {
   // --- Zustand store selectors ---
   const storeNodes = useStore((s) => s.nodes);
   const storeEdges = useStore((s) => s.edges);
-  const selectedNodeId = useStore((s) => s.selectedNodeId);
+  const selectedNodeIds = useStore((s) => s.selectedNodeIds);
   const selectedEdgeId = useStore((s) => s.selectedEdgeId);
 
   const addNode = useStore((s) => s.addNode);
   const addEdge = useStore((s) => s.addEdge);
-  const deleteNode = useStore((s) => s.deleteNode);
   const deleteEdge = useStore((s) => s.deleteEdge);
+  const deleteSelectedNodes = useStore((s) => s.deleteSelectedNodes);
   const updateNodePosition = useStore((s) => s.updateNodePosition);
   const selectNode = useStore((s) => s.selectNode);
+  const toggleNodeSelection = useStore((s) => s.toggleNodeSelection);
+  const selectMultipleNodes = useStore((s) => s.selectMultipleNodes);
   const selectEdge = useStore((s) => s.selectEdge);
   const pushHistory = useStore((s) => s.pushHistory);
   const undo = useStore((s) => s.undo);
   const redo = useStore((s) => s.redo);
   const setNodeParent = useStore((s) => s.setNodeParent);
 
+  // --- Grid settings ---
+  const gridEnabled = useStore((s) => s.gridEnabled);
+  const gridSize = useStore((s) => s.gridSize);
+
+  // --- Search / Filter ---
+  const searchQuery  = useStore((s) => s.searchQuery);
+  const showSearch   = useStore((s) => s.showSearch);
+  const envFilter    = useStore((s) => s.envFilter);
+  const setShowSearch = useStore((s) => s.setShowSearch);
+  const setSearchQuery = useStore((s) => s.setSearchQuery);
+
   // --- Map InfraNode[] -> React Flow Node[] (sorted for parent-before-child) ---
   const rfNodes: Node<ServerData>[] = useMemo(() => {
+    const selectedSet = new Set(selectedNodeIds);
     const sorted = sortNodesForRF(storeNodes);
-    return sorted.map((n) => ({
-      id: n.id,
-      type: n.type,
-      position: n.position,
-      data: n.data,
-      parentId: n.parentId,
-      selected: n.id === selectedNodeId,
-      style: n.style,
-      // Containers should NOT be constrained to their parent's bounds — they
-      // are resizable and may intentionally overflow. Non-container children
-      // should be constrained within their parent.
-      extent:
-        n.type === 'containerNode'
-          ? undefined
-          : n.parentId
-            ? ('parent' as const)
+
+    // Determine which IDs pass the combined search + env filter
+    // For container nodes: show them if any of their children (or descendants) match.
+    const isSearchActive = searchQuery.trim().length > 0;
+    const isEnvActive    = envFilter !== 'all';
+
+    // Pre-compute per-node visibility (ignoring container logic)
+    const nodeVisible = new Map<string, boolean>();
+    for (const n of storeNodes) {
+      const passesSearch = !isSearchActive || nodeMatchesQuery(n, searchQuery);
+      const passesEnv    = !isEnvActive    || n.data.env === envFilter || n.type === 'containerNode';
+      nodeVisible.set(n.id, passesSearch && passesEnv);
+    }
+
+    // For container nodes, they are considered visible if they themselves pass
+    // OR if any descendant passes (so they don't disappear while children are shown).
+    const anyDescendantVisible = (nodeId: string): boolean => {
+      const children = storeNodes.filter((c) => c.parentId === nodeId);
+      for (const child of children) {
+        if (nodeVisible.get(child.id)) return true;
+        if (child.type === 'containerNode' && anyDescendantVisible(child.id)) return true;
+      }
+      return false;
+    };
+
+    const isFilterActive = isSearchActive || isEnvActive;
+
+    return sorted.map((n) => {
+      let visible = nodeVisible.get(n.id) ?? true;
+      // Container nodes stay visible if any descendant is visible
+      if (n.type === 'containerNode' && !visible && isFilterActive) {
+        visible = anyDescendantVisible(n.id);
+      }
+
+      const opacity = isFilterActive && !visible ? 0.15 : 1;
+      const isMatch = isFilterActive && visible && n.type !== 'containerNode';
+
+      return {
+        id: n.id,
+        type: n.type,
+        position: n.position,
+        data: n.data,
+        parentId: n.parentId,
+        selected: selectedSet.has(n.id),
+        style: {
+          ...n.style,
+          opacity,
+          transition: 'opacity 0.2s',
+          // Add a glowing ring for matching server nodes via box-shadow
+          boxShadow: isMatch
+            ? '0 0 0 3px #3B82F6, 0 0 12px 2px rgba(59,130,246,0.4)'
             : undefined,
-      expandParent: n.type !== 'containerNode' && !!n.parentId,
-    }));
-  }, [storeNodes, selectedNodeId]);
+          borderRadius: isMatch ? '8px' : undefined,
+        },
+        // Containers should NOT be constrained to their parent's bounds — they
+        // are resizable and may intentionally overflow. Non-container children
+        // should be constrained within their parent.
+        extent:
+          n.type === 'containerNode'
+            ? undefined
+            : n.parentId
+              ? ('parent' as const)
+              : undefined,
+        expandParent: n.type !== 'containerNode' && !!n.parentId,
+      };
+    });
+  }, [storeNodes, selectedNodeIds, searchQuery, envFilter]);
 
   // --- Map InfraEdge[] -> React Flow Edge[] ---
   const rfEdges: Edge<EdgeData>[] = useMemo(
@@ -365,12 +429,26 @@ export default function Canvas() {
     [addEdge, selectEdge],
   );
 
-  /** Select node on click */
+  /** Select node on click (Ctrl/Meta = toggle multi-select) */
   const onNodeClick: NodeMouseHandler = useCallback(
-    (_event, node) => {
-      selectNode(node.id);
+    (event, node) => {
+      if (event.ctrlKey || event.metaKey) {
+        toggleNodeSelection(node.id);
+      } else {
+        selectNode(node.id);
+      }
     },
-    [selectNode],
+    [selectNode, toggleNodeSelection],
+  );
+
+  /** Handle React Flow built-in box selection changes */
+  const onSelectionChange: OnSelectionChangeFunc = useCallback(
+    ({ nodes: selectedNodes }) => {
+      if (selectedNodes.length > 0) {
+        selectMultipleNodes(selectedNodes.map((n) => n.id));
+      }
+    },
+    [selectMultipleNodes],
   );
 
   /** Select edge on click */
@@ -450,12 +528,12 @@ export default function Canvas() {
         return;
       }
 
-      // Delete selected node or edge
+      // Delete selected nodes or edge
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        const currentSelectedNode = useStore.getState().selectedNodeId;
+        const currentSelectedNodes = useStore.getState().selectedNodeIds;
         const currentSelectedEdge = useStore.getState().selectedEdgeId;
-        if (currentSelectedNode) {
-          deleteNode(currentSelectedNode);
+        if (currentSelectedNodes.length > 0) {
+          deleteSelectedNodes();
         } else if (currentSelectedEdge) {
           deleteEdge(currentSelectedEdge);
         }
@@ -472,16 +550,32 @@ export default function Canvas() {
         e.preventDefault();
         redo();
       }
+
+      // Ctrl+F = Toggle search overlay
+      if (e.key === 'f' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        const current = useStore.getState().showSearch;
+        if (current) {
+          useStore.getState().setSearchQuery('');
+          useStore.getState().setShowSearch(false);
+        } else {
+          useStore.getState().setSearchQuery('');
+          useStore.getState().setShowSearch(true);
+        }
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [deleteNode, deleteEdge, undo, redo]);
+  }, [deleteSelectedNodes, deleteEdge, undo, redo]);
 
   // --- Render ---
 
   return (
-    <div ref={reactFlowWrapper} className="w-full h-full">
+    <div ref={reactFlowWrapper} className="w-full h-full relative">
+      {/* Search overlay — floats above the canvas */}
+      {showSearch && <SearchOverlay />}
+
       <ReactFlow
         nodes={rfNodes}
         edges={rfEdges}
@@ -494,13 +588,22 @@ export default function Canvas() {
         onEdgeClick={onEdgeClick}
         onPaneClick={onPaneClick}
         onNodeDragStop={onNodeDragStop}
+        onSelectionChange={onSelectionChange}
         onDragOver={onDragOver}
         onDrop={onDrop}
+        selectionOnDrag
+        selectionMode={SelectionMode.Partial}
+        snapToGrid={gridEnabled}
+        snapGrid={[gridSize, gridSize]}
         fitView
         deleteKeyCode={null} // We handle delete ourselves
         className="bg-gray-50"
       >
-        <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
+        {gridEnabled ? (
+          <Background variant={BackgroundVariant.Lines} gap={gridSize} size={1} color="#e0e0e0" />
+        ) : (
+          <Background variant={BackgroundVariant.Dots} gap={20} size={1} />
+        )}
         <MiniMap
           nodeStrokeWidth={3}
           zoomable

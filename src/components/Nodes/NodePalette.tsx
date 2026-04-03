@@ -60,7 +60,7 @@ export default function NodePalette() {
       </div>
 
       {/* Node list */}
-      <div className="flex-1 overflow-y-auto py-2 px-2">
+      <div className="flex-1 overflow-y-auto panel-scroll py-2 px-2">
 
         {/* ── 컨테이너 section ──────────────────────────────── */}
         <div className="mb-1">

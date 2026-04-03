@@ -4,9 +4,11 @@ import { useStore } from '../../store/useStore';
 import { saveDiagramAsHtml, loadDiagramFromHtml } from '../../utils/saveLoad';
 import DisplaySettingsModal from './DisplaySettingsModal';
 import CsvImportModal from './CsvImportModal';
+import KeyboardShortcutsModal from './KeyboardShortcutsModal';
 import { exportAsPng, exportAsSvg } from '../../utils/exportImage';
 import { exportAsJson, importFromJson } from '../../utils/exportJson';
 import { downloadCsvTemplate, exportServerListAsCsv } from '../../utils/csvUtils';
+import type { Environment } from '../../types';
 
 // ---------------------------------------------------------------------------
 // Reusable toolbar button
@@ -139,6 +141,7 @@ export default function Toolbar() {
   const { zoomIn, zoomOut, fitView } = useReactFlow();
   const [showSettings, setShowSettings]     = useState(false);
   const [showCsvImport, setShowCsvImport]   = useState(false);
+  const [showShortcuts, setShowShortcuts]   = useState(false);
 
   const historyIndex = useStore((s) => s.historyIndex);
   const historyLength = useStore((s) => s.history.length);
@@ -147,9 +150,39 @@ export default function Toolbar() {
   const clearDiagram = useStore((s) => s.clearDiagram);
   const nodes = useStore((s) => s.nodes);
 
+  // Multi-select & alignment
+  const selectedNodeIds = useStore((s) => s.selectedNodeIds);
+  const alignSelectedNodes = useStore((s) => s.alignSelectedNodes);
+  const multiSelected = selectedNodeIds.length >= 2;
+
+  // Grid
+  const gridEnabled = useStore((s) => s.gridEnabled);
+  const toggleGrid = useStore((s) => s.toggleGrid);
+
+  // Search / Filter
+  const showSearch    = useStore((s) => s.showSearch);
+  const setShowSearch = useStore((s) => s.setShowSearch);
+  const setSearchQuery = useStore((s) => s.setSearchQuery);
+  const envFilter     = useStore((s) => s.envFilter);
+  const setEnvFilter  = useStore((s) => s.setEnvFilter);
+
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < historyLength - 1;
   const hasContent = nodes.length > 0;
+
+  // --- Keyboard shortcut: "?" opens shortcuts help ---
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (
+        e.key === '?' &&
+        !(e.target as HTMLElement).matches('input, textarea, [contenteditable]')
+      ) {
+        setShowShortcuts(true);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   // --- Handlers ---
 
@@ -183,7 +216,10 @@ export default function Toolbar() {
   return (
     <div className="h-12 bg-white border-b border-gray-200 flex items-center px-4 shrink-0 select-none">
       {/* Left: Title */}
-      <span className="font-bold text-gray-800 text-base tracking-tight mr-6">
+      <span
+        className="font-bold text-gray-800 text-base tracking-tight mr-6"
+        title="인프라 구조도 편집기"
+      >
         Infra Sketch
       </span>
 
@@ -209,6 +245,86 @@ export default function Toolbar() {
         <ToolbarButton onClick={handleFitView} title="전체 보기">
           ⊞ Fit
         </ToolbarButton>
+
+        <Sep />
+
+        {/* Grid */}
+        <button
+          onClick={toggleGrid}
+          title={gridEnabled ? '그리드 끄기' : '그리드 켜기 (스냅)'}
+          className={`
+            px-2 py-1 text-sm rounded transition-colors
+            ${gridEnabled
+              ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+              : 'text-gray-700 hover:bg-gray-100 active:bg-gray-200'
+            }
+          `}
+        >
+          # Grid
+        </button>
+
+        {/* Alignment (visible when 2+ nodes selected) */}
+        {multiSelected && (
+          <>
+            <Sep />
+            <span className="text-xs text-gray-400 mr-1">정렬:</span>
+            <button onClick={() => alignSelectedNodes('left')} title="왼쪽 정렬" className="px-1.5 py-1 text-xs text-gray-700 hover:bg-gray-100 rounded">⫷</button>
+            <button onClick={() => alignSelectedNodes('center')} title="가운데 정렬" className="px-1.5 py-1 text-xs text-gray-700 hover:bg-gray-100 rounded">⫿</button>
+            <button onClick={() => alignSelectedNodes('right')} title="오른쪽 정렬" className="px-1.5 py-1 text-xs text-gray-700 hover:bg-gray-100 rounded">⫸</button>
+            <div className="w-px h-4 bg-gray-200 mx-0.5" />
+            <button onClick={() => alignSelectedNodes('top')} title="상단 정렬" className="px-1.5 py-1 text-xs text-gray-700 hover:bg-gray-100 rounded">▔</button>
+            <button onClick={() => alignSelectedNodes('middle')} title="중앙 정렬" className="px-1.5 py-1 text-xs text-gray-700 hover:bg-gray-100 rounded">⊡</button>
+            <button onClick={() => alignSelectedNodes('bottom')} title="하단 정렬" className="px-1.5 py-1 text-xs text-gray-700 hover:bg-gray-100 rounded">▁</button>
+          </>
+        )}
+
+        <Sep />
+
+        {/* Search toggle */}
+        <button
+          onClick={() => {
+            if (showSearch) {
+              setSearchQuery('');
+              setShowSearch(false);
+            } else {
+              setSearchQuery('');
+              setShowSearch(true);
+            }
+          }}
+          title="노드 검색 (Ctrl+F)"
+          className={`
+            px-2 py-1 text-sm rounded transition-colors flex items-center gap-1
+            ${showSearch
+              ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+              : 'text-gray-700 hover:bg-gray-100 active:bg-gray-200'
+            }
+          `}
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+          </svg>
+          검색
+        </button>
+
+        {/* Environment filter */}
+        <select
+          value={envFilter}
+          onChange={(e) => setEnvFilter(e.target.value as Environment | 'all')}
+          title="운영 환경 필터"
+          className={`
+            px-2 py-1 text-sm rounded border transition-colors outline-none cursor-pointer
+            ${envFilter !== 'all'
+              ? 'border-blue-300 bg-blue-50 text-blue-700 font-medium'
+              : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+            }
+          `}
+        >
+          <option value="all">전체 환경</option>
+          <option value="PRD">PRD</option>
+          <option value="DEV">DEV</option>
+          <option value="STG">STG</option>
+        </select>
 
         <Sep />
 
@@ -253,10 +369,23 @@ export default function Toolbar() {
         >
           🗑️ Clear
         </ToolbarButton>
+
+        {/* Help — always far right */}
+        <Sep />
+        <button
+          onClick={() => setShowShortcuts(true)}
+          title="키보드 단축키 도움말 (?)"
+          className="w-7 h-7 flex items-center justify-center text-sm font-bold text-gray-500
+                     rounded-full border border-gray-300 hover:bg-gray-100 hover:text-gray-700
+                     active:bg-gray-200 transition-colors"
+        >
+          ?
+        </button>
       </div>
 
       <DisplaySettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
       <CsvImportModal isOpen={showCsvImport} onClose={() => setShowCsvImport(false)} />
+      <KeyboardShortcutsModal isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
     </div>
   );
 }

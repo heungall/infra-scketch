@@ -484,9 +484,57 @@ function EdgeEditor({ edgeId }: { edgeId: string }) {
 // Main panel
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Multi-select summary panel
+// ---------------------------------------------------------------------------
+
+function MultiSelectSummary({ nodeIds }: { nodeIds: string[] }) {
+  const deleteSelectedNodes = useStore((s) => s.deleteSelectedNodes);
+  const alignSelectedNodes = useStore((s) => s.alignSelectedNodes);
+
+  return (
+    <div>
+      <SectionTitle>{nodeIds.length}개 노드 선택됨</SectionTitle>
+
+      {/* Alignment buttons */}
+      <FieldGroup>
+        <FieldLabel>수평 정렬</FieldLabel>
+        <div className="flex gap-1">
+          <button onClick={() => alignSelectedNodes('left')} title="왼쪽 정렬" className="flex-1 px-2 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 rounded border border-gray-300">⫷ 왼쪽</button>
+          <button onClick={() => alignSelectedNodes('center')} title="가운데 정렬" className="flex-1 px-2 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 rounded border border-gray-300">⫿ 가운데</button>
+          <button onClick={() => alignSelectedNodes('right')} title="오른쪽 정렬" className="flex-1 px-2 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 rounded border border-gray-300">⫸ 오른쪽</button>
+        </div>
+      </FieldGroup>
+
+      <FieldGroup>
+        <FieldLabel>수직 정렬</FieldLabel>
+        <div className="flex gap-1">
+          <button onClick={() => alignSelectedNodes('top')} title="상단 정렬" className="flex-1 px-2 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 rounded border border-gray-300">▔ 상단</button>
+          <button onClick={() => alignSelectedNodes('middle')} title="중앙 정렬" className="flex-1 px-2 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 rounded border border-gray-300">⊡ 중앙</button>
+          <button onClick={() => alignSelectedNodes('bottom')} title="하단 정렬" className="flex-1 px-2 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 rounded border border-gray-300">▁ 하단</button>
+        </div>
+      </FieldGroup>
+
+      <button
+        onClick={deleteSelectedNodes}
+        className="w-full mt-4 bg-red-50 hover:bg-red-100 text-red-600 border border-red-300 rounded px-3 py-1.5 text-sm font-medium"
+      >
+        선택 노드 모두 삭제 ({nodeIds.length}개)
+      </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main panel
+// ---------------------------------------------------------------------------
+
 export default function PropertyPanel() {
-  const selectedNodeId = useStore((s) => s.selectedNodeId);
+  const selectedNodeIds = useStore((s) => s.selectedNodeIds);
   const selectedEdgeId = useStore((s) => s.selectedEdgeId);
+
+  const selectedNodeId = selectedNodeIds[0] ?? null;
+  const multiSelected = selectedNodeIds.length >= 2;
 
   return (
     <div>
@@ -496,7 +544,8 @@ export default function PropertyPanel() {
         </div>
       )}
 
-      {selectedNodeId && <NodeEditor nodeId={selectedNodeId} />}
+      {multiSelected && <MultiSelectSummary nodeIds={selectedNodeIds} />}
+      {selectedNodeId && !multiSelected && <NodeEditor nodeId={selectedNodeId} />}
       {selectedEdgeId && <EdgeEditor edgeId={selectedEdgeId} />}
     </div>
   );
