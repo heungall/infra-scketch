@@ -2,7 +2,7 @@ import type { InfraNode } from '../types';
 import { useStore } from '../store/useStore';
 
 const CELL = 8;
-const PAD  = 20;
+const PAD  = 10;
 
 interface Rect { x: number; y: number; w: number; h: number }
 interface Pt   { x: number; y: number }
