@@ -185,13 +185,33 @@ export function computeAvoidingPath(
 
   const smoothed = compress(rawPath);
 
-  const points: Pt[] = smoothed.map(([gx, gy]) => ({
+  const gridPts: Pt[] = smoothed.map(([gx, gy]) => ({
     x: gx * CELL + minX,
     y: gy * CELL + minY,
   }));
 
-  points[0] = { x: sx, y: sy };
-  points[points.length - 1] = { x: tx, y: ty };
+  // Force strictly orthogonal: connect exact source/target via L-shaped stubs
+  const first = gridPts[0];
+  const last = gridPts[gridPts.length - 1];
+
+  const points: Pt[] = [];
+
+  // Start: exact source → align to first grid point (horizontal then vertical)
+  points.push({ x: sx, y: sy });
+  if (sx !== first.x && sy !== first.y) {
+    points.push({ x: first.x, y: sy }); // horizontal first
+  }
+
+  // Middle grid path
+  for (const p of gridPts) {
+    points.push(p);
+  }
+
+  // End: align from last grid point to exact target (vertical then horizontal)
+  if (tx !== last.x && ty !== last.y) {
+    points.push({ x: tx, y: last.y }); // vertical first, then horizontal
+  }
+  points.push({ x: tx, y: ty });
 
   return points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
 }
