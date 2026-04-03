@@ -433,11 +433,19 @@ export default function Canvas() {
     // Edge removals are handled via Delete key below.
   }, []);
 
-  /** Create new edge on connection */
+  /** Create new edge on connection — parse service handle IDs */
   const onConnect: OnConnect = useCallback(
     (connection: Connection) => {
       if (connection.source && connection.target) {
-        const newEdgeId = addEdge(connection.source, connection.target);
+        // Handle IDs are like "svc-{serviceId}-out" / "svc-{serviceId}-in"
+        const parseSvcId = (handle?: string | null) => {
+          if (!handle) return undefined;
+          const m = handle.match(/^svc-(.+)-(in|out)$/);
+          return m ? m[1] : undefined;
+        };
+        const srcSvcId = parseSvcId(connection.sourceHandle);
+        const tgtSvcId = parseSvcId(connection.targetHandle);
+        const newEdgeId = addEdge(connection.source, connection.target, srcSvcId, tgtSvcId);
         selectEdge(newEdgeId);
       }
     },

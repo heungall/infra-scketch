@@ -36,7 +36,7 @@ function InfraEdge(props: EdgeProps<InfraEdgeType>) {
   const protocol = data?.protocol ?? '';
   const ports = data?.ports ?? [];
 
-  const strokeWidth = selected ? 3 : 2;
+  const strokeWidth = selected ? 2 : 1;
   const strokeDasharray = lineStyle === 'dashed' ? '5,5' : undefined;
 
   // Orthogonal (right-angle) path

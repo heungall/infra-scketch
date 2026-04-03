@@ -64,7 +64,7 @@ export interface InfraStore {
   getChildNodes: (parentId: string) => InfraNode[];
 
   // --- 엣지 CRUD ---
-  addEdge: (source: string, target: string) => string;
+  addEdge: (source: string, target: string, sourceServiceId?: string, targetServiceId?: string) => string;
   updateEdge: (id: string, data: Partial<EdgeData>) => void;
   deleteEdge: (id: string) => void;
 
@@ -268,14 +268,19 @@ export const useStore = create<InfraStore>((set, get) => ({
   },
 
   // --- 엣지 ---
-  addEdge: (source, target) => {
+  addEdge: (source, target, sourceServiceId?, targetServiceId?) => {
     const id = `edge-${uuidv4().slice(0, 8)}`;
+    const defaultData = createDefaultEdgeData();
     const edge: InfraEdge = {
       id,
       source,
       target,
       type: 'infraEdge',
-      data: createDefaultEdgeData(),
+      data: {
+        ...defaultData,
+        ...(sourceServiceId ? { sourceServiceId } : {}),
+        ...(targetServiceId ? { targetServiceId } : {}),
+      },
     };
     get().pushHistory();
     set(state => ({ edges: [...state.edges, edge] }));
