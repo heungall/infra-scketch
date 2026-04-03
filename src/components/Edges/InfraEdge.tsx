@@ -6,6 +6,7 @@ import {
   BaseEdge,
 } from '@xyflow/react';
 import { type EdgeData } from '../../types';
+import { useStore } from '../../store/useStore';
 
 type InfraEdgeType = Edge<EdgeData, 'infraEdge'>;
 
@@ -21,6 +22,12 @@ function InfraEdge(props: EdgeProps<InfraEdgeType>) {
     selected,
     data,
   } = props;
+
+  const nodes = useStore((s) => s.nodes);
+  const sourceNode = nodes.find(n => n.id === props.source);
+  const targetNode = nodes.find(n => n.id === props.target);
+  const sourceSvc = sourceNode?.data.services?.find(s => s.id === data?.sourceServiceId);
+  const targetSvc = targetNode?.data.services?.find(s => s.id === data?.targetServiceId);
 
   const color = data?.color ?? '#666666';
   const lineStyle = data?.lineStyle ?? 'solid';
@@ -64,7 +71,11 @@ function InfraEdge(props: EdgeProps<InfraEdgeType>) {
       ? `포트: ${portString}`
       : '';
 
-  const hasLabel = label.trim() !== '' || protocolPortLine.trim() !== '';
+  const serviceLine = sourceSvc || targetSvc
+    ? `${sourceSvc?.name ?? '?'} → ${targetSvc?.name ?? '?'}`
+    : '';
+
+  const hasLabel = label.trim() !== '' || protocolPortLine.trim() !== '' || serviceLine !== '';
 
   return (
     <>
@@ -129,6 +140,11 @@ function InfraEdge(props: EdgeProps<InfraEdgeType>) {
               {protocolPortLine.trim() !== '' && (
                 <div className="text-gray-500 leading-tight">
                   {protocolPortLine}
+                </div>
+              )}
+              {serviceLine !== '' && (
+                <div className="text-[10px] text-gray-400 leading-tight">
+                  {serviceLine}
                 </div>
               )}
             </div>

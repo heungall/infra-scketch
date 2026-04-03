@@ -27,14 +27,41 @@ export function isContainerVariant(variant: NodeVariant): boolean {
 /** 운영 환경 */
 export type Environment = 'PRD' | 'DEV' | 'STG' | '';
 
+// ============================================================
+// 서비스 (DB/미들웨어/애플리케이션)
+// ============================================================
+
+export type ServiceType = 'db' | 'middleware' | 'application' | 'custom';
+
+export interface ServiceEntry {
+  id: string;
+  type: ServiceType;
+  name: string;
+  port: string;
+  description: string;
+}
+
+export const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
+  db: 'DB',
+  middleware: '미들웨어',
+  application: '애플리케이션',
+  custom: '기타',
+};
+
+export const SERVICE_TYPE_ICONS: Record<ServiceType, string> = {
+  db: '🗄️',
+  middleware: '⚙️',
+  application: '📱',
+  custom: '🔧',
+};
+
 /** 서버 노드 메타데이터 (컨테이너 노드도 동일 구조 사용) */
 export interface ServerData {
   label: string;
   hostname: string;
   ip: string[];
   os: string;
-  db: string;
-  sw: string;
+  services: ServiceEntry[];
   cpu_memory: string;
   role: string;
   env: Environment;
@@ -73,6 +100,10 @@ export interface EdgeData {
   direction: EdgeDirection;
   lineStyle: EdgeLineStyle;
   color: string;
+  /** 소스 노드의 연결 서비스 ID */
+  sourceServiceId?: string;
+  /** 타겟 노드의 연결 서비스 ID */
+  targetServiceId?: string;
 }
 
 /** React Flow 엣지에 사용될 전체 엣지 타입 */
@@ -183,8 +214,7 @@ export interface NodeDisplaySettings {
   showHostname: boolean;
   showIp: boolean;
   showOs: boolean;
-  showDb: boolean;
-  showSw: boolean;
+  showServices: boolean;
   showCpuMemory: boolean;
   showRole: boolean;
   showEnv: boolean;
@@ -201,8 +231,7 @@ export const DISPLAY_FIELD_OPTIONS: DisplayFieldMeta[] = [
   { key: 'showHostname',  label: '호스트명' },
   { key: 'showIp',        label: 'IP 주소' },
   { key: 'showOs',        label: 'OS 정보' },
-  { key: 'showDb',        label: 'DB 정보' },
-  { key: 'showSw',        label: 'SW/미들웨어' },
+  { key: 'showServices',  label: '서비스 (DB/MW)' },
   { key: 'showCpuMemory', label: 'CPU/Memory' },
   { key: 'showRole',      label: '역할' },
   { key: 'showEnv',       label: '운영 환경' },
@@ -213,8 +242,7 @@ export const DEFAULT_DISPLAY_SETTINGS: NodeDisplaySettings = {
   showHostname: true,
   showIp: true,
   showOs: true,
-  showDb: false,
-  showSw: false,
+  showServices: true,
   showCpuMemory: false,
   showRole: false,
   showEnv: true,
@@ -264,8 +292,7 @@ export function createDefaultServerData(variant: NodeVariant): ServerData {
     hostname: '',
     ip: [''],
     os: '',
-    db: '',
-    sw: '',
+    services: [],
     cpu_memory: '',
     role: '',
     env: '',

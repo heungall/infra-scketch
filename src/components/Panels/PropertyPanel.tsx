@@ -7,9 +7,12 @@ import {
   type EdgeDirection,
   type EdgeLineStyle,
   type PresetColor,
+  type ServiceEntry,
+  type ServiceType,
   PREDEFINED_COLORS,
   SERVER_NODE_CONFIGS,
   CONTAINER_NODE_CONFIGS,
+  SERVICE_TYPE_LABELS,
   isContainerVariant,
 } from '../../types';
 
@@ -226,6 +229,88 @@ function ColorPresetPicker({
 }
 
 // ---------------------------------------------------------------------------
+// Service list editor component
+// ---------------------------------------------------------------------------
+
+function ServiceListEditor({
+  services,
+  onChange,
+}: {
+  services: ServiceEntry[];
+  onChange: (services: ServiceEntry[]) => void;
+}) {
+  const addService = () => {
+    const newSvc: ServiceEntry = {
+      id: `svc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      type: 'db',
+      name: '',
+      port: '',
+      description: '',
+    };
+    onChange([...services, newSvc]);
+  };
+
+  const updateService = (idx: number, updates: Partial<ServiceEntry>) => {
+    const next = [...services];
+    next[idx] = { ...next[idx], ...updates };
+    onChange(next);
+  };
+
+  const removeService = (idx: number) => {
+    onChange(services.filter((_, i) => i !== idx));
+  };
+
+  const typeOptions: { value: ServiceType; label: string }[] = (
+    Object.entries(SERVICE_TYPE_LABELS) as [ServiceType, string][]
+  ).map(([value, label]) => ({ value, label }));
+
+  return (
+    <div className="space-y-1.5">
+      {services.map((svc, idx) => (
+        <div key={svc.id} className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded px-1.5 py-1">
+          <select
+            value={svc.type}
+            onChange={(e) => updateService(idx, { type: e.target.value as ServiceType })}
+            className="w-16 text-xs border border-gray-300 rounded px-1 py-0.5 shrink-0"
+          >
+            {typeOptions.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          <input
+            type="text"
+            value={svc.name}
+            onChange={(e) => updateService(idx, { name: e.target.value })}
+            placeholder="Oracle 19c"
+            className="flex-1 min-w-0 text-xs border border-gray-300 rounded px-1.5 py-0.5"
+          />
+          <input
+            type="text"
+            value={svc.port}
+            onChange={(e) => updateService(idx, { port: e.target.value })}
+            placeholder="1521"
+            className="w-14 text-xs border border-gray-300 rounded px-1.5 py-0.5 font-mono shrink-0"
+          />
+          <button
+            onClick={() => removeService(idx)}
+            className="text-red-400 hover:text-red-600 text-sm px-0.5 shrink-0"
+            title="삭제"
+          >
+            ×
+          </button>
+        </div>
+      ))}
+      <button
+        onClick={addService}
+        className="text-xs text-blue-500 hover:text-blue-700 mt-0.5"
+      >
+        + 서비스 추가
+      </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Node editor panel
 // ---------------------------------------------------------------------------
 
@@ -302,13 +387,11 @@ function NodeEditor({ nodeId }: { nodeId: string }) {
           </FieldGroup>
 
           <FieldGroup>
-            <FieldLabel>DB 종류 및 버전</FieldLabel>
-            <TextInput value={d.db} onChange={(v) => upd({ db: v })} placeholder="Oracle 19c" />
-          </FieldGroup>
-
-          <FieldGroup>
-            <FieldLabel>SW / 미들웨어 버전</FieldLabel>
-            <TextInput value={d.sw} onChange={(v) => upd({ sw: v })} placeholder="Tomcat 9.0" />
+            <FieldLabel>설치된 서비스 (DB / 미들웨어 등)</FieldLabel>
+            <ServiceListEditor
+              services={d.services ?? []}
+              onChange={(services) => upd({ services })}
+            />
           </FieldGroup>
 
           <FieldGroup>
@@ -391,6 +474,7 @@ function NodeEditor({ nodeId }: { nodeId: string }) {
 
 function EdgeEditor({ edgeId }: { edgeId: string }) {
   const edge = useStore((s) => s.edges.find((e) => e.id === edgeId));
+  const nodes = useStore((s) => s.nodes);
   const updateEdge = useStore((s) => s.updateEdge);
   const deleteEdge = useStore((s) => s.deleteEdge);
   const selectEdge = useStore((s) => s.selectEdge);
@@ -400,6 +484,11 @@ function EdgeEditor({ edgeId }: { edgeId: string }) {
   const d = edge.data;
 
   const upd = (partial: Partial<EdgeData>) => updateEdge(edgeId, partial);
+
+  const sourceNode = nodes.find((n) => n.id === edge.source);
+  const targetNode = nodes.find((n) => n.id === edge.target);
+  const sourceServices = sourceNode?.data.services ?? [];
+  const targetServices = targetNode?.data.services ?? [];
 
   const directionOptions: { value: EdgeDirection; label: string }[] = [
     { value: 'unidirectional', label: '단방향 →' },
@@ -435,6 +524,60 @@ function EdgeEditor({ edgeId }: { edgeId: string }) {
           addLabel="포트 추가"
         />
       </FieldGroup>
+
+      {sourceServices.length > 0 && (
+        <FieldGroup>
+          <FieldLabel>소스 서비스 (출발 노드)</FieldLabel>
+          <select
+            value={d.sourceServiceId ?? ''}
+            onChange={(e) => {
+              const val = e.target.value || undefined;
+              const svc = sourceServices.find((s) => s.id === val);
+              upd({
+                sourceServiceId: val,
+                ...(svc && d.ports.length === 0 && svc.port
+                  ? { ports: [svc.port] }
+                  : {}),
+              });
+            }}
+            className="w-full text-sm border border-gray-300 rounded px-2 py-1"
+          >
+            <option value="">(없음)</option>
+            {sourceServices.map((svc) => (
+              <option key={svc.id} value={svc.id}>
+                {svc.name}{svc.port ? ` :${svc.port}` : ''}
+              </option>
+            ))}
+          </select>
+        </FieldGroup>
+      )}
+
+      {targetServices.length > 0 && (
+        <FieldGroup>
+          <FieldLabel>타겟 서비스 (도착 노드)</FieldLabel>
+          <select
+            value={d.targetServiceId ?? ''}
+            onChange={(e) => {
+              const val = e.target.value || undefined;
+              const svc = targetServices.find((s) => s.id === val);
+              upd({
+                targetServiceId: val,
+                ...(svc && d.ports.length === 0 && svc.port
+                  ? { ports: [svc.port] }
+                  : {}),
+              });
+            }}
+            className="w-full text-sm border border-gray-300 rounded px-2 py-1"
+          >
+            <option value="">(없음)</option>
+            {targetServices.map((svc) => (
+              <option key={svc.id} value={svc.id}>
+                {svc.name}{svc.port ? ` :${svc.port}` : ''}
+              </option>
+            ))}
+          </select>
+        </FieldGroup>
+      )}
 
       <FieldGroup>
         <FieldLabel>설명 메모</FieldLabel>

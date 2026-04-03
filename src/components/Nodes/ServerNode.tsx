@@ -1,6 +1,6 @@
 import { memo, useCallback } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
-import { NODE_TYPE_CONFIGS, type ServerData } from '../../types';
+import { NODE_TYPE_CONFIGS, SERVICE_TYPE_ICONS, type ServerData } from '../../types';
 import { getNodeIcon } from '../../utils/getNodeIcon';
 import { useStore } from '../../store/useStore';
 
@@ -76,10 +76,12 @@ interface SummaryBodyProps {
   showIp: boolean;
   showOs: boolean;
   showEnv: boolean;
+  showServices: boolean;
 }
 
-function SummaryBody({ data, showIp, showOs, showEnv }: SummaryBodyProps) {
+function SummaryBody({ data, showIp, showOs, showEnv, showServices }: SummaryBodyProps) {
   const firstIp = data.ip?.[0];
+  const services = data.services ?? [];
   return (
     <div className="mt-1.5 space-y-1">
       {showEnv && data.env && (
@@ -100,6 +102,15 @@ function SummaryBody({ data, showIp, showOs, showEnv }: SummaryBodyProps) {
       {showOs && data.os && (
         <div className="text-[10px] text-gray-600 truncate">{data.os}</div>
       )}
+      {showServices && services.length > 0 && (
+        <div className="space-y-0.5">
+          {services.slice(0, 2).map((svc) => (
+            <div key={svc.id} className="text-[10px] text-gray-600 truncate">
+              {SERVICE_TYPE_ICONS[svc.type]}{svc.name}{svc.port ? ` :${svc.port}` : ''}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -110,8 +121,7 @@ interface DetailBodyProps {
   showHostname: boolean;
   showIp: boolean;
   showOs: boolean;
-  showDb: boolean;
-  showSw: boolean;
+  showServices: boolean;
   showCpuMemory: boolean;
   showRole: boolean;
   showEnv: boolean;
@@ -129,21 +139,19 @@ function DetailBody({
   showHostname,
   showIp,
   showOs,
-  showDb,
-  showSw,
+  showServices,
   showCpuMemory,
   showRole,
   showEnv,
   showTags,
 }: DetailBodyProps) {
   const ipStr = data.ip?.filter(Boolean).join(', ');
+  const services = data.services ?? [];
 
   const fields: FieldRow[] = [
     showHostname ? { key: 'hostname', label: '호스트명', value: data.hostname } : null,
     showIp       ? { key: 'ip',       label: 'IP',       value: ipStr ?? '' }    : null,
     showOs       ? { key: 'os',       label: 'OS',       value: data.os }        : null,
-    showDb       ? { key: 'db',       label: 'DB',       value: data.db }        : null,
-    showSw       ? { key: 'sw',       label: 'SW',       value: data.sw }        : null,
     showCpuMemory? { key: 'cpu',      label: 'CPU/MEM',  value: data.cpu_memory }: null,
     showRole     ? { key: 'role',     label: '역할',     value: data.role }      : null,
   ].filter((f): f is FieldRow => f !== null && Boolean(f.value));
@@ -168,6 +176,24 @@ function DetailBody({
           <span className="text-gray-700 font-mono break-all">{f.value}</span>
         </div>
       ))}
+
+      {/* services */}
+      {showServices && services.length > 0 && (
+        <div className="mt-1 space-y-0.5">
+          {services.map((svc) => (
+            <div key={svc.id} className="flex items-center justify-between gap-1 text-[10px] leading-snug">
+              <span className="text-gray-700 truncate">
+                {SERVICE_TYPE_ICONS[svc.type]}{svc.name}
+              </span>
+              {svc.port && (
+                <span className="shrink-0 font-mono text-gray-500 bg-gray-100 px-1 rounded border border-gray-200">
+                  :{svc.port}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* tags */}
       {showTags && data.tags && data.tags.length > 0 && (
@@ -261,8 +287,7 @@ function ServerNode({ data, selected, id }: NodeProps<ServerNodeType>) {
             showHostname={ds.showHostname}
             showIp={ds.showIp}
             showOs={ds.showOs}
-            showDb={ds.showDb}
-            showSw={ds.showSw}
+            showServices={ds.showServices}
             showCpuMemory={ds.showCpuMemory}
             showRole={ds.showRole}
             showEnv={ds.showEnv}
@@ -274,6 +299,7 @@ function ServerNode({ data, selected, id }: NodeProps<ServerNodeType>) {
             showIp={ds.showIp}
             showOs={ds.showOs}
             showEnv={ds.showEnv}
+            showServices={ds.showServices}
           />
         )}
       </div>

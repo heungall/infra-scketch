@@ -3,7 +3,7 @@
 // ============================================================
 
 import { useStore } from '../store/useStore';
-import { NODE_TYPE_CONFIGS, type NodeVariant, type Environment, createDefaultServerData, isContainerVariant, CONTAINER_DEFAULT_SIZE } from '../types';
+import { NODE_TYPE_CONFIGS, type NodeVariant, type Environment, type ServiceEntry, createDefaultServerData, isContainerVariant, CONTAINER_DEFAULT_SIZE } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
 // -------------------------------------------------------
@@ -39,7 +39,7 @@ function rowToCsv(cells: string[]): string {
 // -------------------------------------------------------
 
 const CSV_HEADERS = [
-  'label', 'hostname', 'ip', 'type', 'os', 'db', 'sw',
+  'label', 'hostname', 'ip', 'type', 'os', 'services',
   'cpu_memory', 'role', 'env', 'zone', 'tags', 'color',
 ];
 
@@ -49,8 +49,7 @@ const CSV_HEADER_KO: Record<string, string> = {
   ip:          'IP 주소 (복수 시 세미콜론 구분)',
   type:        '노드 유형 (was/db/web/fw/lb/vm/physical/external/custom/zone)',
   os:          'OS 종류 및 버전',
-  db:          'DB 종류 및 버전',
-  sw:          'SW/미들웨어 버전',
+  services:    '서비스 목록 (type:name:port 형식, 세미콜론 구분)',
   cpu_memory:  'CPU/Memory 사양',
   role:        '서버 역할 설명',
   env:         '운영 환경 (PRD/DEV/STG)',
@@ -90,14 +89,17 @@ export function exportServerListAsCsv() {
       }
     }
 
+    const servicesStr = (d.services ?? [])
+      .map(s => `${s.type}:${s.name}:${s.port}`)
+      .join(';');
+
     const row = [
       d.label,
       d.hostname,
       d.ip.filter(Boolean).join(';'),
       d.nodeVariant,
       d.os,
-      d.db,
-      d.sw,
+      servicesStr,
       d.cpu_memory,
       d.role,
       d.env,
@@ -137,8 +139,7 @@ export function downloadCsvTemplate() {
     '10.0.1.20;10.0.1.21',
     'was',
     'RHEL 8.6',
-    '',
-    'Tomcat 9.0.65',
+    'middleware:Tomcat 9.0:8080;db:Oracle 19c:1521',
     '16 Core / 64 GB',
     '주문 처리 WAS',
     'PRD',
@@ -154,8 +155,7 @@ export function downloadCsvTemplate() {
     '10.0.1.10',
     'db',
     'RHEL 8.6',
-    'Oracle 19c',
-    '',
+    'db:Oracle 19c:1521',
     '32 Core / 128 GB',
     '메인 운영 DB',
     'PRD',
@@ -179,8 +179,7 @@ export interface ParsedCsvRow {
     ip: string;
     type: string;
     os: string;
-    db?: string;
-    sw?: string;
+    services?: string;
     cpu_memory?: string;
     role?: string;
     env?: string;
@@ -283,8 +282,7 @@ export function parseCsvFile(file: File): Promise<ParsedCsvRow[]> {
               ip:          cellMap['ip']          ?? '',
               type:        cellMap['type']?.toLowerCase() ?? '',
               os:          cellMap['os']          ?? '',
-              db:          cellMap['db'],
-              sw:          cellMap['sw'],
+              services:    cellMap['services'],
               cpu_memory:  cellMap['cpu_memory'],
               role:        cellMap['role'],
               env:         cellMap['env'],
@@ -435,8 +433,16 @@ export function importCsvRows(rows: ParsedCsvRow[], options: ImportOptions) {
     nodeData.hostname   = d.hostname;
     nodeData.ip         = d.ip.split(';').map(s => s.trim()).filter(Boolean);
     nodeData.os         = d.os;
-    nodeData.db         = d.db ?? '';
-    nodeData.sw         = d.sw ?? '';
+    nodeData.services   = (d.services ?? '').split(';').filter(Boolean).map(s => {
+      const [type, name, port] = s.split(':');
+      return {
+        id: `svc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        type: (type ?? 'custom') as ServiceEntry['type'],
+        name: name ?? '',
+        port: port ?? '',
+        description: '',
+      } satisfies ServiceEntry;
+    });
     nodeData.cpu_memory = d.cpu_memory ?? '';
     nodeData.role       = d.role ?? '';
     nodeData.env        = (['PRD', 'DEV', 'STG'].includes((d.env ?? '').toUpperCase())
