@@ -1,7 +1,7 @@
 import {
   type EdgeProps,
   type Edge,
-  getBezierPath,
+  getSmoothStepPath,
   EdgeLabelRenderer,
   BaseEdge,
 } from '@xyflow/react';
@@ -39,16 +39,17 @@ function InfraEdge(props: EdgeProps<InfraEdgeType>) {
   const strokeWidth = selected ? 3 : 2;
   const strokeDasharray = lineStyle === 'dashed' ? '5,5' : undefined;
 
-  const [edgePath, labelX, labelY] = getBezierPath({
+  // Orthogonal (right-angle) path
+  const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX,
     sourceY,
     sourcePosition,
     targetX,
     targetY,
     targetPosition,
+    borderRadius: 0,
   });
 
-  // Build unique marker IDs per edge so colors don't bleed across edges
   const markerEndId = `arrow-end-${id}`;
   const markerStartId = `arrow-start-${id}`;
 
@@ -60,16 +61,12 @@ function InfraEdge(props: EdgeProps<InfraEdgeType>) {
   const markerStart =
     direction === 'bidirectional' ? `url(#${markerStartId})` : undefined;
 
-  // Build label lines
+  // Build label
   const portString = ports.length > 0 ? ports.join(', ') : '';
   const protocolPortLine =
     protocol && portString
       ? `${protocol}:${portString}`
-      : protocol
-      ? protocol
-      : portString
-      ? `포트: ${portString}`
-      : '';
+      : protocol || (portString ? `포트: ${portString}` : '');
 
   const serviceLine = sourceSvc || targetSvc
     ? `${sourceSvc?.name ?? '?'} → ${targetSvc?.name ?? '?'}`
@@ -79,7 +76,6 @@ function InfraEdge(props: EdgeProps<InfraEdgeType>) {
 
   return (
     <>
-      {/* Per-edge SVG marker defs for correct arrowhead colors */}
       <defs>
         {(direction === 'unidirectional' || direction === 'bidirectional') && (
           <marker
@@ -133,19 +129,13 @@ function InfraEdge(props: EdgeProps<InfraEdgeType>) {
           >
             <div className="bg-white border border-gray-200 rounded px-2 py-1 shadow text-xs text-center whitespace-nowrap">
               {label.trim() !== '' && (
-                <div className="font-semibold text-gray-700 leading-tight">
-                  {label}
-                </div>
+                <div className="font-semibold text-gray-700 leading-tight">{label}</div>
               )}
               {protocolPortLine.trim() !== '' && (
-                <div className="text-gray-500 leading-tight">
-                  {protocolPortLine}
-                </div>
+                <div className="text-gray-500 leading-tight">{protocolPortLine}</div>
               )}
               {serviceLine !== '' && (
-                <div className="text-[10px] text-gray-400 leading-tight">
-                  {serviceLine}
-                </div>
+                <div className="text-[10px] text-gray-400 leading-tight">{serviceLine}</div>
               )}
             </div>
           </div>

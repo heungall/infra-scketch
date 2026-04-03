@@ -7,19 +7,21 @@ type ServerNodeType = Node<ServerData, 'serverNode'>;
 
 // ─── Handle style ────────────────────────────────────────────────────────────
 const handleStyle = 'w-2 h-2 bg-gray-400 border border-gray-500 rounded-full';
+const svcHandleBase: React.CSSProperties = {
+  width: 6,
+  height: 6,
+  background: '#9CA3AF',
+  border: '1px solid #6B7280',
+  borderRadius: '50%',
+};
 
 // ─── 행 색상 규칙 ────────────────────────────────────────────────────────────
-// OS: 노란색 / DB: 연노랑 / 기타: 흰색 / IP: 회색
-
 function getServiceBg(svc: ServiceEntry): string {
   if (svc.type === 'db') return 'bg-yellow-100 text-gray-900';
   return 'bg-white text-gray-800';
 }
 
-function getOsBg(): string {
-  return 'bg-yellow-300 text-gray-900';
-}
-
+const OS_CLASS = 'bg-yellow-300 text-gray-900';
 const IP_ROW_CLASS = 'bg-gray-200 text-gray-700';
 
 // ─── Main component ──────────────────────────────────────────────────────────
@@ -29,10 +31,11 @@ function ServerNode({ data, selected, id }: NodeProps<ServerNodeType>) {
 
   return (
     <>
-      <Handle type="target" position={Position.Top} className={handleStyle} />
-      <Handle type="source" position={Position.Bottom} className={handleStyle} />
-      <Handle type="target" position={Position.Left} className={handleStyle} />
-      <Handle type="source" position={Position.Right} className={handleStyle} />
+      {/* Default node handles (top/bottom) for general connections */}
+      <Handle type="target" position={Position.Top} id="top" className={handleStyle} />
+      <Handle type="source" position={Position.Bottom} id="bottom" className={handleStyle} />
+      <Handle type="target" position={Position.Left} id="left" className={handleStyle} />
+      <Handle type="source" position={Position.Right} id="right" className={handleStyle} />
 
       <div
         className={`
@@ -73,13 +76,26 @@ function ServerNode({ data, selected, id }: NodeProps<ServerNodeType>) {
             ))
           )}
 
-          {/* Services - each on its own row */}
+          {/* Services — each row has its own left/right handles */}
           {ds.showServices && services.length > 0 && (
             services.map((svc) => (
               <div
                 key={svc.id}
-                className={`px-2 py-1 text-center font-medium ${getServiceBg(svc)}`}
+                className={`relative px-2 py-1 text-center font-medium ${getServiceBg(svc)}`}
               >
+                {/* Service-specific handles on left/right of this row */}
+                <Handle
+                  type="target"
+                  position={Position.Left}
+                  id={`svc-${svc.id}-in`}
+                  style={{ ...svcHandleBase, position: 'absolute', left: -3, top: '50%', transform: 'translateY(-50%)' }}
+                />
+                <Handle
+                  type="source"
+                  position={Position.Right}
+                  id={`svc-${svc.id}-out`}
+                  style={{ ...svcHandleBase, position: 'absolute', right: -3, top: '50%', transform: 'translateY(-50%)' }}
+                />
                 {svc.sid || svc.name}
                 {svc.sid && svc.name ? ` (${svc.name})` : ''}
                 {svc.port ? ` :${svc.port}` : ''}
@@ -119,9 +135,9 @@ function ServerNode({ data, selected, id }: NodeProps<ServerNodeType>) {
             </div>
           )}
 
-          {/* OS - always at bottom with colored background */}
+          {/* OS */}
           {ds.showOs && data.os && (
-            <div className={`px-2 py-1 text-center font-medium ${getOsBg()}`}>
+            <div className={`px-2 py-1 text-center font-medium ${OS_CLASS}`}>
               {data.os}
             </div>
           )}
@@ -131,7 +147,6 @@ function ServerNode({ data, selected, id }: NodeProps<ServerNodeType>) {
   );
 }
 
-/** Check if a hex color is light (for text contrast) */
 function isLightColor(hex?: string): boolean {
   if (!hex) return false;
   const c = hex.replace('#', '');

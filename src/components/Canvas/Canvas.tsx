@@ -331,16 +331,25 @@ export default function Canvas() {
   }, [storeNodes, selectedNodeIds, searchQuery, envFilter]);
 
   // --- Map InfraEdge[] -> React Flow Edge[] ---
+  // When sourceServiceId/targetServiceId is set, route the edge through
+  // the per-service handles so the line connects at the service row.
   const rfEdges: Edge<EdgeData>[] = useMemo(
     () =>
-      storeEdges.map((e) => ({
-        id: e.id,
-        source: e.source,
-        target: e.target,
-        type: e.type,
-        data: e.data,
-        selected: e.id === selectedEdgeId,
-      })),
+      storeEdges.map((e) => {
+        const srcSvcId = e.data?.sourceServiceId;
+        const tgtSvcId = e.data?.targetServiceId;
+        return {
+          id: e.id,
+          source: e.source,
+          target: e.target,
+          type: e.type,
+          data: e.data,
+          selected: e.id === selectedEdgeId,
+          // Route through service-level handles when linked
+          sourceHandle: srcSvcId ? `svc-${srcSvcId}-out` : undefined,
+          targetHandle: tgtSvcId ? `svc-${tgtSvcId}-in` : undefined,
+        };
+      }),
     [storeEdges, selectedEdgeId],
   );
 
