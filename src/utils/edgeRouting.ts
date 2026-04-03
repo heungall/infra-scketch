@@ -1,12 +1,11 @@
 import PF from 'pathfinding';
 import type { InfraNode } from '../types';
 
-const CELL = 10;      // grid cell size (px)
-const PAD  = 15;      // padding around nodes
+const CELL = 10;
+const PAD  = 20;
 
 interface Rect { x: number; y: number; w: number; h: number }
 
-/** Get absolute bounding rect for a node (handles parent-relative positions) */
 function getNodeRect(node: InfraNode, allNodes: InfraNode[]): Rect {
   let x = node.position.x;
   let y = node.position.y;
@@ -19,14 +18,33 @@ function getNodeRect(node: InfraNode, allNodes: InfraNode[]): Rect {
     cur = parent;
   }
   const w = node.style?.width ?? 180;
-  const h = node.style?.height ?? 100;
+  const h = node.style?.height ?? 120;
   return { x, y, w, h };
 }
 
-/**
- * Compute an obstacle-avoiding orthogonal SVG path between two points.
- * Returns an SVG path string like "M 0 0 L 50 0 L 50 80 L 100 80".
- */
+function segmentsIntersectRect(
+  x1: number, y1: number, x2: number, y2: number, r: Rect,
+): boolean {
+  const rx = r.x - PAD;
+  const ry = r.y - PAD;
+  const rw = r.w + PAD * 2;
+  const rh = r.h + PAD * 2;
+
+  // Horizontal segment
+  if (y1 === y2) {
+    const minX = Math.min(x1, x2);
+    const maxX = Math.max(x1, x2);
+    return y1 >= ry && y1 <= ry + rh && maxX >= rx && minX <= rx + rw;
+  }
+  // Vertical segment
+  if (x1 === x2) {
+    const minY = Math.min(y1, y2);
+    const maxY = Math.max(y1, y2);
+    return x1 >= rx && x1 <= rx + rw && maxY >= ry && minY <= ry + rh;
+  }
+  return false;
+}
+
 export function computeAvoidingPath(
   sx: number, sy: number,
   tx: number, ty: number,
@@ -34,39 +52,51 @@ export function computeAvoidingPath(
   targetNodeId: string,
   allNodes: InfraNode[],
 ): string {
-  // Fallback: direct step path
-  const fallback = `M ${sx} ${sy} L ${sx} ${(sy + ty) / 2} L ${tx} ${(sy + ty) / 2} L ${tx} ${ty}`;
+  const midY = (sy + ty) / 2;
+  const midX = (sx + tx) / 2;
+  const fallbackH = `M ${sx} ${sy} L ${midX} ${sy} L ${midX} ${ty} L ${tx} ${ty}`;
+  const fallbackV = `M ${sx} ${sy} L ${sx} ${midY} L ${tx} ${midY} L ${tx} ${ty}`;
 
-  if (allNodes.length === 0) return fallback;
-
-  // Collect obstacle rects (exclude source/target nodes)
+  // Collect obstacle rects (exclude source, target, containers)
   const obstacles: Rect[] = [];
   for (const n of allNodes) {
     if (n.id === sourceNodeId || n.id === targetNodeId) continue;
-    // Only consider server nodes as obstacles (not containers)
     if (n.type === 'containerNode') continue;
     obstacles.push(getNodeRect(n, allNodes));
   }
 
-  if (obstacles.length === 0) return fallback;
+  if (obstacles.length === 0) return fallbackH;
 
-  // Determine grid bounds from all points
+  // Quick check: does the simple L-path intersect anything?
+  const simpleHit = obstacles.some(r =>
+    segmentsIntersectRect(sx, sy, midX, sy, r) ||
+    segmentsIntersectRect(midX, sy, midX, ty, r) ||
+    segmentsIntersectRect(midX, ty, tx, ty, r)
+  );
+  if (!simpleHit) return fallbackH;
+
+  const simpleHitV = obstacles.some(r =>
+    segmentsIntersectRect(sx, sy, sx, midY, r) ||
+    segmentsIntersectRect(sx, midY, tx, midY, r) ||
+    segmentsIntersectRect(tx, midY, tx, ty, r)
+  );
+  if (!simpleHitV) return fallbackV;
+
+  // Need full pathfinding
   const allX = [sx, tx, ...obstacles.flatMap(r => [r.x - PAD, r.x + r.w + PAD])];
   const allY = [sy, ty, ...obstacles.flatMap(r => [r.y - PAD, r.y + r.h + PAD])];
-  const minX = Math.min(...allX) - PAD * 2;
-  const minY = Math.min(...allY) - PAD * 2;
-  const maxX = Math.max(...allX) + PAD * 2;
-  const maxY = Math.max(...allY) + PAD * 2;
+  const minX = Math.min(...allX) - PAD * 3;
+  const minY = Math.min(...allY) - PAD * 3;
+  const maxX = Math.max(...allX) + PAD * 3;
+  const maxY = Math.max(...allY) + PAD * 3;
 
   const cols = Math.ceil((maxX - minX) / CELL);
   const rows = Math.ceil((maxY - minY) / CELL);
 
-  // Safety: don't create huge grids
-  if (cols > 500 || rows > 500 || cols * rows > 120000) return fallback;
+  if (cols > 400 || rows > 400 || cols * rows > 100000) return fallbackH;
 
   const grid = new PF.Grid(cols, rows);
 
-  // Mark obstacle cells as unwalkable
   for (const r of obstacles) {
     const x0 = Math.max(0, Math.floor((r.x - PAD - minX) / CELL));
     const y0 = Math.max(0, Math.floor((r.y - PAD - minY) / CELL));
@@ -79,40 +109,37 @@ export function computeAvoidingPath(
     }
   }
 
-  // Convert source/target to grid coords
   const gsx = Math.max(0, Math.min(cols - 1, Math.round((sx - minX) / CELL)));
   const gsy = Math.max(0, Math.min(rows - 1, Math.round((sy - minY) / CELL)));
   const gtx = Math.max(0, Math.min(cols - 1, Math.round((tx - minX) / CELL)));
   const gty = Math.max(0, Math.min(rows - 1, Math.round((ty - minY) / CELL)));
 
-  // Ensure start/end are walkable
   grid.setWalkableAt(gsx, gsy, true);
   grid.setWalkableAt(gtx, gty, true);
 
   try {
-    const finder = new PF.OrthogonalJumpPointFinder({
-      heuristic: PF.Heuristic.manhattan,
+    // AStarFinder with no diagonal movement = orthogonal only
+    const finder = new PF.AStarFinder({
+      diagonalMovement: (PF as any).DiagonalMovement
+        ? (PF as any).DiagonalMovement.Never
+        : 0,
     });
-    const path = finder.findPath(gsx, gsy, gtx, gty, grid);
+    const rawPath = finder.findPath(gsx, gsy, gtx, gty, grid);
 
-    if (path.length < 2) return fallback;
+    if (rawPath.length < 2) return fallbackH;
 
-    // Simplify: compress into orthogonal segments (remove collinear points)
-    const smoothed = PF.Util.compressPath(path);
+    const smoothed = PF.Util.compressPath(rawPath);
 
-    // Convert grid coords back to canvas coords
     const points = smoothed.map(([gx, gy]) => ({
       x: gx * CELL + minX,
       y: gy * CELL + minY,
     }));
 
-    // Force exact start/end points
     points[0] = { x: sx, y: sy };
     points[points.length - 1] = { x: tx, y: ty };
 
-    // Build SVG path
     return points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
   } catch {
-    return fallback;
+    return fallbackH;
   }
 }
