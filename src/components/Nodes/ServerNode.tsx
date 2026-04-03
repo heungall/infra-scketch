@@ -83,19 +83,15 @@ function ServerNode({ data, selected, id }: NodeProps<ServerNodeType>) {
                 key={svc.id}
                 className={`relative px-2 py-1 text-center font-medium ${getServiceBg(svc)}`}
               >
-                {/* Service-specific handles on left/right of this row */}
-                <Handle
-                  type="target"
-                  position={Position.Left}
-                  id={`svc-${svc.id}-in`}
-                  style={{ ...svcHandleBase, position: 'absolute', left: -3, top: '50%', transform: 'translateY(-50%)' }}
-                />
-                <Handle
-                  type="source"
-                  position={Position.Right}
-                  id={`svc-${svc.id}-out`}
-                  style={{ ...svcHandleBase, position: 'absolute', right: -3, top: '50%', transform: 'translateY(-50%)' }}
-                />
+                {/* Service handles: both sides, both directions */}
+                <Handle type="source" position={Position.Left} id={`svc-${svc.id}-left-out`}
+                  style={{ ...svcHandleBase, position: 'absolute', left: -3, top: '50%', transform: 'translateY(-50%)' }} />
+                <Handle type="target" position={Position.Left} id={`svc-${svc.id}-left-in`}
+                  style={{ ...svcHandleBase, position: 'absolute', left: -3, top: '50%', transform: 'translateY(-50%)' }} />
+                <Handle type="source" position={Position.Right} id={`svc-${svc.id}-right-out`}
+                  style={{ ...svcHandleBase, position: 'absolute', right: -3, top: '50%', transform: 'translateY(-50%)' }} />
+                <Handle type="target" position={Position.Right} id={`svc-${svc.id}-right-in`}
+                  style={{ ...svcHandleBase, position: 'absolute', right: -3, top: '50%', transform: 'translateY(-50%)' }} />
                 {svc.sid || svc.name}
                 {svc.sid && svc.name ? ` (${svc.name})` : ''}
                 {svc.port ? ` :${svc.port}` : ''}

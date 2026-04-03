@@ -229,6 +229,7 @@ export default function Canvas() {
 
   const addNode = useStore((s) => s.addNode);
   const addEdge = useStore((s) => s.addEdge);
+  const updateEdge = useStore((s) => s.updateEdge);
   const deleteEdge = useStore((s) => s.deleteEdge);
   const deleteSelectedNodes = useStore((s) => s.deleteSelectedNodes);
   const updateNodePosition = useStore((s) => s.updateNodePosition);
@@ -345,9 +346,9 @@ export default function Canvas() {
           type: e.type,
           data: e.data,
           selected: e.id === selectedEdgeId,
-          // Route through service-level handles when linked
-          sourceHandle: srcSvcId ? `svc-${srcSvcId}-out` : undefined,
-          targetHandle: tgtSvcId ? `svc-${tgtSvcId}-in` : undefined,
+          // Use stored handle IDs (preserves user's chosen side)
+          sourceHandle: e.data?.sourceHandleId ?? (srcSvcId ? `svc-${srcSvcId}-right-out` : undefined),
+          targetHandle: e.data?.targetHandleId ?? (tgtSvcId ? `svc-${tgtSvcId}-left-in` : undefined),
         };
       }),
     [storeEdges, selectedEdgeId],
@@ -437,15 +438,22 @@ export default function Canvas() {
   const onConnect: OnConnect = useCallback(
     (connection: Connection) => {
       if (connection.source && connection.target) {
-        // Handle IDs are like "svc-{serviceId}-out" / "svc-{serviceId}-in"
+        // Handle IDs: "svc-{serviceId}-left-out", "svc-{serviceId}-right-in", etc.
         const parseSvcId = (handle?: string | null) => {
           if (!handle) return undefined;
-          const m = handle.match(/^svc-(.+)-(in|out)$/);
+          const m = handle.match(/^svc-(.+)-(left|right)-(in|out)$/);
           return m ? m[1] : undefined;
         };
         const srcSvcId = parseSvcId(connection.sourceHandle);
         const tgtSvcId = parseSvcId(connection.targetHandle);
         const newEdgeId = addEdge(connection.source, connection.target, srcSvcId, tgtSvcId);
+        // Also store the exact handle IDs for direction preservation
+        if (connection.sourceHandle || connection.targetHandle) {
+          updateEdge(newEdgeId, {
+            sourceHandleId: connection.sourceHandle ?? undefined,
+            targetHandleId: connection.targetHandle ?? undefined,
+          });
+        }
         selectEdge(newEdgeId);
       }
     },

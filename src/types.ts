@@ -102,10 +102,11 @@ export interface EdgeData {
   lineStyle: EdgeLineStyle;
   color: string;
   strokeWidth: number;
-  /** 소스 노드의 연결 서비스 ID */
   sourceServiceId?: string;
-  /** 타겟 노드의 연결 서비스 ID */
   targetServiceId?: string;
+  /** 실제 연결된 핸들 ID (사용자 선택 방향 유지) */
+  sourceHandleId?: string;
+  targetHandleId?: string;
 }
 
 /** React Flow 엣지에 사용될 전체 엣지 타입 */
