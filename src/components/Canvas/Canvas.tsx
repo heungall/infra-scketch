@@ -614,12 +614,13 @@ export default function Canvas() {
         onSelectionChange={onSelectionChange}
         onDragOver={onDragOver}
         onDrop={onDrop}
+        connectionMode={'loose' as any}
         selectionOnDrag
         selectionMode={SelectionMode.Partial}
         snapToGrid={gridEnabled}
         snapGrid={[gridSize, gridSize]}
         fitView
-        deleteKeyCode={null} // We handle delete ourselves
+        deleteKeyCode={null}
         className="bg-gray-50"
       >
         {gridEnabled ? (
