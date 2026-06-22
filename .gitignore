@@ -12,6 +12,14 @@ dist
 dist-ssr
 *.local
 
+# 내부 인프라 데이터 — 공개 저장소에 올리지 않음 (IP/호스트명 등 포함)
+server/data/
+exported/
+
+# 로컬 도구/설정
+.claude/
+.omc/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

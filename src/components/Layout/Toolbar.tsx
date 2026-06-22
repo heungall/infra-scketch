@@ -4,10 +4,11 @@ import { useStore } from '../../store/useStore';
 import { saveDiagramAsHtml, loadDiagramFromHtml } from '../../utils/saveLoad';
 import DisplaySettingsModal from './DisplaySettingsModal';
 import CsvImportModal from './CsvImportModal';
-import KeyboardShortcutsModal from './KeyboardShortcutsModal';
+import HelpModal from './HelpModal';
 import { exportAsPng, exportAsSvg } from '../../utils/exportImage';
 import { exportAsJson, importFromJson } from '../../utils/exportJson';
 import { downloadCsvTemplate, exportServerListAsCsv } from '../../utils/csvUtils';
+import ServerSaveModal from './ServerSaveModal';
 import type { Environment } from '../../types';
 
 // ---------------------------------------------------------------------------
@@ -142,6 +143,10 @@ export default function Toolbar() {
   const [showSettings, setShowSettings]     = useState(false);
   const [showCsvImport, setShowCsvImport]   = useState(false);
   const [showShortcuts, setShowShortcuts]   = useState(false);
+  const [showServerSave, setShowServerSave] = useState(false);
+
+  const diagramName = useStore((s) => s.diagramName);
+  const setDiagramName = useStore((s) => s.setDiagramName);
 
   const historyIndex = useStore((s) => s.historyIndex);
   const historyLength = useStore((s) => s.history.length);
@@ -215,13 +220,20 @@ export default function Toolbar() {
 
   return (
     <div className="h-12 bg-white border-b border-gray-200 flex items-center px-4 shrink-0 select-none">
-      {/* Left: Title */}
-      <span
-        className="font-bold text-gray-800 text-base tracking-tight mr-6"
-        title="인프라 구조도 편집기"
-      >
+      {/* Left: Title + Board name */}
+      <span className="font-bold text-gray-800 text-base tracking-tight mr-2 shrink-0">
         Infra Sketch
       </span>
+      <span className="text-gray-400 mr-1 shrink-0">/</span>
+      <input
+        value={diagramName}
+        onChange={(e) => setDiagramName(e.target.value)}
+        placeholder="보드 이름 입력..."
+        className="text-sm text-gray-700 font-medium bg-transparent border-b border-transparent
+                   hover:border-gray-300 focus:border-blue-400 focus:outline-none
+                   px-1 py-0.5 mr-4 min-w-[120px] max-w-[250px] truncate"
+        title="보드 이름 (서버 저장 시 사용)"
+      />
 
       {/* Right: Action buttons */}
       <div className="flex items-center gap-0.5 ml-auto">
@@ -328,7 +340,14 @@ export default function Toolbar() {
 
         <Sep />
 
-        {/* Save / Load */}
+        {/* Server Save / Load — 로컬 개발(백엔드 구동 시)에서만 노출, 정적 배포 빌드에선 숨김 */}
+        {import.meta.env.DEV && (
+          <ToolbarButton onClick={() => setShowServerSave(true)} title="서버 저장/불러오기">
+            🖥 Server
+          </ToolbarButton>
+        )}
+
+        {/* Save / Load (HTML) */}
         <ToolbarButton onClick={handleSaveHtml} title="HTML로 저장">
           💾 Save
         </ToolbarButton>
@@ -385,7 +404,10 @@ export default function Toolbar() {
 
       <DisplaySettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
       <CsvImportModal isOpen={showCsvImport} onClose={() => setShowCsvImport(false)} />
-      <KeyboardShortcutsModal isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
+      <HelpModal isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
+      {import.meta.env.DEV && (
+        <ServerSaveModal isOpen={showServerSave} onClose={() => setShowServerSave(false)} />
+      )}
     </div>
   );
 }

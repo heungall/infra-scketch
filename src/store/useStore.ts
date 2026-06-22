@@ -17,6 +17,7 @@ import {
   DEFAULT_DISPLAY_SETTINGS,
 } from '../types';
 import { v4 as uuidv4 } from 'uuid';
+import { clearAutoSave } from '../utils/saveLoad';
 
 // ============================================================
 // Undo/Redo 히스토리
@@ -78,6 +79,10 @@ export interface InfraStore {
   toggleNodeSelection: (id: string) => void;
   selectMultipleNodes: (ids: string[]) => void;
   deleteSelectedNodes: () => void;
+  duplicateSelectedNodes: () => void;
+  clipboard: InfraNode[];
+  copySelectedNodes: () => void;
+  pasteNodes: () => void;
   alignSelectedNodes: (direction: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => void;
   selectEdge: (id: string | null) => void;
 
@@ -86,6 +91,10 @@ export interface InfraStore {
   gridSize: number;
   toggleGrid: () => void;
   setGridSize: (size: number) => void;
+
+  // --- 보드 이름 ---
+  diagramName: string;
+  setDiagramName: (name: string) => void;
 
   // --- 캔버스 ---
   setCanvas: (canvas: Partial<CanvasState>) => void;
@@ -122,10 +131,12 @@ export const useStore = create<InfraStore>((set, get) => ({
   edges: [],
   zones: [],
   canvas: { zoom: 1, position: { x: 0, y: 0 } },
+  diagramName: '',
 
   selectedNodeIds: [],
   selectedNodeId: null,
   selectedEdgeId: null,
+  clipboard: [],
 
   // --- 검색 / 필터 ---
   searchQuery: '',
@@ -360,6 +371,43 @@ export const useStore = create<InfraStore>((set, get) => ({
       selectedNodeId: null,
     }));
   },
+  copySelectedNodes: () => {
+    const state = get();
+    const ids = state.selectedNodeIds;
+    if (ids.length === 0) return;
+    const copied = state.nodes
+      .filter(n => ids.includes(n.id))
+      .map(n => JSON.parse(JSON.stringify(n)));
+    set({ clipboard: copied });
+  },
+  pasteNodes: () => {
+    const state = get();
+    const clip = state.clipboard;
+    if (clip.length === 0) return;
+    state.pushHistory();
+    const OFFSET = 30;
+    const idMap = new Map<string, string>();
+    const newNodes: InfraNode[] = clip.map(n => {
+      const newId = `node-${uuidv4().slice(0, 8)}`;
+      idMap.set(n.id, newId);
+      return {
+        ...JSON.parse(JSON.stringify(n)),
+        id: newId,
+        position: { x: n.position.x + OFFSET, y: n.position.y + OFFSET },
+        ...(n.parentId && idMap.has(n.parentId) ? { parentId: idMap.get(n.parentId) } : { parentId: undefined }),
+      };
+    });
+    const newIds = newNodes.map(n => n.id);
+    set(s => ({
+      nodes: [...s.nodes, ...newNodes],
+      selectedNodeIds: newIds,
+      selectedNodeId: newIds[0] ?? null,
+    }));
+  },
+  duplicateSelectedNodes: () => {
+    get().copySelectedNodes();
+    get().pasteNodes();
+  },
   alignSelectedNodes: (direction) => {
     const state = get();
     const ids = state.selectedNodeIds;
@@ -418,13 +466,15 @@ export const useStore = create<InfraStore>((set, get) => ({
   setGridSize: (size) => set({ gridSize: size }),
 
   // --- 캔버스 ---
+  setDiagramName: (name) => set({ diagramName: name }),
   setCanvas: (canvas) => set(state => ({ canvas: { ...state.canvas, ...canvas } })),
 
   // --- 저장/불러오기 ---
   exportDiagram: () => {
-    const { nodes, edges, zones, canvas, displaySettings } = get();
+    const { nodes, edges, zones, canvas, displaySettings, diagramName } = get();
     return {
       version: '1.0',
+      name: diagramName,
       canvas,
       nodes: JSON.parse(JSON.stringify(nodes)),
       edges: JSON.parse(JSON.stringify(edges)),
@@ -435,6 +485,7 @@ export const useStore = create<InfraStore>((set, get) => ({
 
   importDiagram: (data) => {
     set({
+      diagramName: data.name || '',
       nodes: data.nodes || [],
       edges: data.edges || [],
       zones: data.zones || [],
@@ -455,6 +506,7 @@ export const useStore = create<InfraStore>((set, get) => ({
 
   clearDiagram: () => {
     set({
+      diagramName: '',
       nodes: [],
       edges: [],
       zones: [],
@@ -467,5 +519,6 @@ export const useStore = create<InfraStore>((set, get) => ({
       history: [{ nodes: [], edges: [], zones: [] }],
       historyIndex: 0,
     });
+    clearAutoSave();
   },
 }));

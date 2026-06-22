@@ -250,8 +250,6 @@ export default function Canvas() {
   const searchQuery  = useStore((s) => s.searchQuery);
   const showSearch   = useStore((s) => s.showSearch);
   const envFilter    = useStore((s) => s.envFilter);
-  const setShowSearch = useStore((s) => s.setShowSearch);
-  const setSearchQuery = useStore((s) => s.setSearchQuery);
 
   // --- Map InfraNode[] -> React Flow Node[] (sorted for parent-before-child) ---
   const rfNodes: Node<ServerData>[] = useMemo(() => {
@@ -580,6 +578,33 @@ export default function Canvas() {
       if (e.key === 'z' && (e.ctrlKey || e.metaKey) && e.shiftKey) {
         e.preventDefault();
         redo();
+      }
+
+      // Ctrl+C = Copy selected nodes
+      if (e.key === 'c' && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+        const sel = useStore.getState().selectedNodeIds;
+        if (sel.length > 0) {
+          e.preventDefault();
+          useStore.getState().copySelectedNodes();
+        }
+      }
+
+      // Ctrl+V = Paste nodes
+      if (e.key === 'v' && (e.ctrlKey || e.metaKey) && !e.shiftKey) {
+        const clip = useStore.getState().clipboard;
+        if (clip.length > 0) {
+          e.preventDefault();
+          useStore.getState().pasteNodes();
+        }
+      }
+
+      // Ctrl+D = Duplicate selected nodes
+      if (e.key === 'd' && (e.ctrlKey || e.metaKey)) {
+        const sel = useStore.getState().selectedNodeIds;
+        if (sel.length > 0) {
+          e.preventDefault();
+          useStore.getState().duplicateSelectedNodes();
+        }
       }
 
       // Ctrl+F = Toggle search overlay

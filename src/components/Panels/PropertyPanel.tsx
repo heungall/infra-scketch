@@ -3,6 +3,7 @@ import {
   type ServerData,
   type EdgeData,
   type Environment,
+  type HaRole,
   type NodeVariant,
   type EdgeDirection,
   type EdgeLineStyle,
@@ -106,12 +107,6 @@ function StringListInput({
   addLabel?: string;
 }) {
   const list = values.length > 0 ? values : [''];
-
-  const update = (idx: number, val: string) => {
-    const next = [...list];
-    next[idx] = val;
-    onChange(next.filter((_, i) => i !== idx || val !== '').length === 0 ? [''] : next);
-  };
 
   const updateExact = (idx: number, val: string) => {
     const next = [...list];
@@ -351,6 +346,12 @@ function NodeEditor({ nodeId }: { nodeId: string }) {
     { value: 'STG', label: 'STG (스테이징)' },
   ];
 
+  const haRoleOptions: { value: HaRole; label: string }[] = [
+    { value: '', label: '(없음)' },
+    { value: 'active', label: 'Active' },
+    { value: 'standby', label: 'Standby' },
+  ];
+
   const serverVariantOptions: { value: NodeVariant; label: string }[] = SERVER_NODE_CONFIGS.map(
     (c) => ({ value: c.variant, label: c.label })
   );
@@ -439,6 +440,32 @@ function NodeEditor({ nodeId }: { nodeId: string }) {
           addLabel="태그 추가"
         />
       </FieldGroup>
+
+      {/* ── 이중화 (HA) ──────────────────────────────── */}
+      <FieldGroup>
+        <FieldLabel>이중화 그룹</FieldLabel>
+        <TextInput value={d.haGroup ?? ''} onChange={(v) => upd({ haGroup: v })} placeholder="예: DB-HA-1" />
+      </FieldGroup>
+      {d.haGroup && (
+        <>
+          <FieldGroup>
+            <FieldLabel>이중화 역할</FieldLabel>
+            <SelectInput<HaRole>
+              value={d.haRole ?? ''}
+              onChange={(v) => upd({ haRole: v })}
+              options={haRoleOptions}
+            />
+          </FieldGroup>
+          <FieldGroup>
+            <FieldLabel>VIP (가상 IP)</FieldLabel>
+            <TextInput value={d.haVip ?? ''} onChange={(v) => upd({ haVip: v })} placeholder="예: 10.0.1.100" />
+          </FieldGroup>
+          <FieldGroup>
+            <FieldLabel>가상 호스트명</FieldLabel>
+            <TextInput value={d.haVhostname ?? ''} onChange={(v) => upd({ haVhostname: v })} placeholder="예: db-vip.internal.com" />
+          </FieldGroup>
+        </>
+      )}
 
       <FieldGroup>
         <FieldLabel>노드 유형</FieldLabel>

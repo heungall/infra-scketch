@@ -32,6 +32,8 @@ function InfraEdge(props: EdgeProps<InfraEdgeType>) {
   const strokeDasharray = lineStyle === 'dashed' ? '5,5' : undefined;
 
   // Obstacle-avoiding orthogonal path
+  const sourceHandleId = props.sourceHandleId ?? '';
+  const targetHandleId = props.targetHandleId ?? '';
   const edgePath = useMemo(
     () => computeAvoidingPath(
       sourceX, sourceY,
@@ -39,8 +41,10 @@ function InfraEdge(props: EdgeProps<InfraEdgeType>) {
       props.source,
       props.target,
       nodes,
+      sourceHandleId,
+      targetHandleId,
     ),
-    [sourceX, sourceY, targetX, targetY, props.source, props.target, nodes],
+    [sourceX, sourceY, targetX, targetY, props.source, props.target, nodes, sourceHandleId, targetHandleId],
   );
 
   const markerEndId = `arrow-end-${id}`;

@@ -1,6 +1,6 @@
 import { memo, useCallback, useRef, useState } from 'react';
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
-import { NODE_TYPE_CONFIGS, type ServerData } from '../../types';
+import { type ServerData } from '../../types';
 import { getNodeIcon } from '../../utils/getNodeIcon';
 import { useStore } from '../../store/useStore';
 
@@ -8,12 +8,6 @@ import { useStore } from '../../store/useStore';
 type ContainerNodeType = Node<ServerData, 'containerNode'>;
 
 // ─── Helper ──────────────────────────────────────────────────────────────────
-function getConfig(variant: string) {
-  return (
-    NODE_TYPE_CONFIGS.find((c) => c.variant === variant) ?? NODE_TYPE_CONFIGS[0]
-  );
-}
-
 const ENV_COLORS: Record<string, string> = {
   PRD: 'bg-red-100 text-red-700',
   DEV: 'bg-green-100 text-green-700',
@@ -44,8 +38,6 @@ function ContainerNode({ data, selected, id }: NodeProps<ContainerNodeType>) {
   const resizeContainer = useStore((s) => s.resizeContainer);
   const pushHistory = useStore((s) => s.pushHistory);
   const ds = useStore((s) => s.displaySettings);
-
-  const config = getConfig(data.nodeVariant);
 
   // ─── Inline label editing ─────────────────────────────────────────────────
   const [editing, setEditing] = useState(false);
@@ -129,19 +121,19 @@ function ContainerNode({ data, selected, id }: NodeProps<ContainerNodeType>) {
 
   const firstIp = data.ip?.[0];
 
+  // ─── Zone / Firewall: container rendering ─────────────────────────────────
   return (
     <>
       {/* Connection handles — 4 sides, slightly larger than server node */}
-      <Handle type="target" position={Position.Top}    className={handleStyle} />
-      <Handle type="source" position={Position.Bottom} className={handleStyle} />
-      <Handle type="target" position={Position.Left}   className={handleStyle} />
-      <Handle type="source" position={Position.Right}  className={handleStyle} />
+      <Handle type="target" position={Position.Top}    id="top-in" className={handleStyle} />
+      <Handle type="source" position={Position.Top}    id="top-out" className={handleStyle} />
+      <Handle type="target" position={Position.Bottom} id="bottom-in" className={handleStyle} />
+      <Handle type="source" position={Position.Bottom} id="bottom-out" className={handleStyle} />
+      <Handle type="target" position={Position.Left}   id="left-in" className={handleStyle} />
+      <Handle type="source" position={Position.Left}   id="left-out" className={handleStyle} />
+      <Handle type="target" position={Position.Right}  id="right-in" className={handleStyle} />
+      <Handle type="source" position={Position.Right}  id="right-out" className={handleStyle} />
 
-      {/*
-        Outer wrapper: fills 100% of the React Flow node dimensions (set via
-        node.style.width / height in the store). pointer-events on the body
-        area must remain 'auto' so React Flow can handle child interactions.
-      */}
       <div
         ref={containerRef}
         className="w-full h-full rounded-xl flex flex-col overflow-visible"
@@ -197,7 +189,7 @@ function ContainerNode({ data, selected, id }: NodeProps<ContainerNodeType>) {
             </span>
           )}
 
-          {/* hostname / IP badges (meaningful for vm/firewall) */}
+          {/* hostname / IP badges (meaningful for firewall) */}
           {ds.showHostname && data.hostname && (
             <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded
                              bg-white/70 text-gray-600 border border-gray-200 truncate max-w-[100px]">
@@ -212,12 +204,7 @@ function ContainerNode({ data, selected, id }: NodeProps<ContainerNodeType>) {
           )}
         </div>
 
-        {/*
-          Body: flex-1 so it fills remaining height.
-          pointer-events: none here so child nodes inside the container receive
-          mouse events normally from React Flow. The container itself is still
-          draggable via the header or the node selection box.
-        */}
+        {/* Body: child nodes area */}
         <div
           className="flex-1"
           style={{ pointerEvents: 'none' }}
@@ -232,7 +219,6 @@ function ContainerNode({ data, selected, id }: NodeProps<ContainerNodeType>) {
           onMouseDown={onResizeMouseDown}
           title="드래그하여 크기 조정"
         >
-          {/* Small grip icon — three diagonal dots */}
           <svg
             width="10"
             height="10"

@@ -47,7 +47,7 @@ const CSV_HEADER_KO: Record<string, string> = {
   label:       '서버명 (노드 표시명)',
   hostname:    '호스트명',
   ip:          'IP 주소 (복수 시 세미콜론 구분)',
-  type:        '노드 유형 (was/db/web/fw/lb/vm/physical/external/custom/zone)',
+  type:        '노드 유형 (physical/vm/firewall/zone/client/external/custom)',
   os:          'OS 종류 및 버전',
   services:    '서비스 목록 (type:name:port:sid 형식, 세미콜론 구분)',
   cpu_memory:  'CPU/Memory 사양',
@@ -132,12 +132,12 @@ export function downloadCsvTemplate() {
   const koRow = CSV_HEADERS.map(h => `# ${CSV_HEADER_KO[h] ?? h}`);
   lines.push(rowToCsv(koRow));
 
-  // 3. 샘플 데이터 1
+  // 3. 샘플 데이터 1 (물리 서버)
   lines.push(rowToCsv([
     'WAS 서버 #1',
     'was01.internal.com',
     '10.0.1.20;10.0.1.21',
-    'was',
+    'physical',
     'RHEL 8.6',
     'middleware:Tomcat 9.0:8080;db:Oracle 19c:1521:ORCL',
     '16 Core / 64 GB',
@@ -145,15 +145,15 @@ export function downloadCsvTemplate() {
     'PRD',
     'Internal Network',
     'core;order',
-    '#E8F5E9',
+    '',
   ]));
 
-  // 4. 샘플 데이터 2
+  // 4. 샘플 데이터 2 (가상 머신)
   lines.push(rowToCsv([
     'DB 서버 (Oracle)',
     'db01.internal.com',
     '10.0.1.10',
-    'db',
+    'vm',
     'RHEL 8.6',
     'db:Oracle 19c:1521:ORCL',
     '32 Core / 128 GB',
@@ -161,7 +161,7 @@ export function downloadCsvTemplate() {
     'PRD',
     'DB Zone',
     'core;oracle',
-    '#FFF3E0',
+    '',
   ]));
 
   const csv = BOM + lines.join('\r\n');

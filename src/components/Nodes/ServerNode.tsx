@@ -25,17 +25,30 @@ const OS_CLASS = 'bg-yellow-300 text-gray-900';
 const IP_ROW_CLASS = 'bg-gray-200 text-gray-700';
 
 // ─── Main component ──────────────────────────────────────────────────────────
-function ServerNode({ data, selected, id }: NodeProps<ServerNodeType>) {
+
+// ─── HA 배지 색상 ────────────────────────────────────────────────────────────
+const HA_ROLE_STYLE: Record<string, { bg: string; text: string; label: string }> = {
+  active:  { bg: 'bg-blue-100',  text: 'text-blue-700',  label: 'Active' },
+  standby: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'Standby' },
+};
+
+function ServerNode({ data, selected }: NodeProps<ServerNodeType>) {
   const ds = useStore((s) => s.displaySettings);
   const services = data.services ?? [];
+  const hasHa = !!(data.haGroup);
 
   return (
     <>
       {/* Default node handles (top/bottom) for general connections */}
-      <Handle type="target" position={Position.Top} id="top" className={handleStyle} />
-      <Handle type="source" position={Position.Bottom} id="bottom" className={handleStyle} />
-      <Handle type="target" position={Position.Left} id="left" className={handleStyle} />
-      <Handle type="source" position={Position.Right} id="right" className={handleStyle} />
+      {/* 각 방향에 source+target 쌍 — 아무 핸들끼리 연결 가능 */}
+      <Handle type="target" position={Position.Top} id="top-in" className={handleStyle} />
+      <Handle type="source" position={Position.Top} id="top-out" className={handleStyle} />
+      <Handle type="target" position={Position.Bottom} id="bottom-in" className={handleStyle} />
+      <Handle type="source" position={Position.Bottom} id="bottom-out" className={handleStyle} />
+      <Handle type="target" position={Position.Left} id="left-in" className={handleStyle} />
+      <Handle type="source" position={Position.Left} id="left-out" className={handleStyle} />
+      <Handle type="target" position={Position.Right} id="right-in" className={handleStyle} />
+      <Handle type="source" position={Position.Right} id="right-out" className={handleStyle} />
 
       <div
         className={`
@@ -45,7 +58,10 @@ function ServerNode({ data, selected, id }: NodeProps<ServerNodeType>) {
             : 'shadow-sm'
           }
         `}
-        style={{ borderColor: data.borderColor || '#666' }}
+        style={{
+          borderColor: data.borderColor || '#666',
+          ...(hasHa ? { outline: '2px dashed ' + (data.borderColor || '#666'), outlineOffset: '2px' } : {}),
+        }}
       >
         {/* ── Title bar ─────────────────────────────────── */}
         <div
@@ -60,6 +76,30 @@ function ServerNode({ data, selected, id }: NodeProps<ServerNodeType>) {
 
         {/* ── Body rows ─────────────────────────────────── */}
         <div className="bg-white divide-y divide-gray-200">
+          {/* HA badge */}
+          {hasHa && (
+            <div className="px-2 py-0.5 bg-gray-50">
+              <div className="flex items-center justify-center gap-1">
+                <span className="text-[9px] font-bold text-gray-500">🔄 {data.haGroup}</span>
+                {data.haRole && HA_ROLE_STYLE[data.haRole] && (
+                  <span className={`text-[9px] px-1 rounded font-semibold ${HA_ROLE_STYLE[data.haRole].bg} ${HA_ROLE_STYLE[data.haRole].text}`}>
+                    {HA_ROLE_STYLE[data.haRole].label}
+                  </span>
+                )}
+              </div>
+              {(data.haVip || data.haVhostname) && (
+                <div className="flex items-center justify-center gap-1.5 mt-0.5">
+                  {data.haVhostname && (
+                    <span className="text-[9px] font-mono text-purple-600">V:{data.haVhostname}</span>
+                  )}
+                  {data.haVip && (
+                    <span className="text-[9px] font-mono text-teal-600">VIP:{data.haVip}</span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Hostname */}
           {ds.showHostname && data.hostname && (
             <div className="px-2 py-1 text-center font-mono text-gray-700">

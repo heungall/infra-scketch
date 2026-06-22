@@ -5,19 +5,15 @@
 /** 서버 노드 유형 */
 export type NodeVariant =
   | 'physical'    // 물리 서버
-  | 'vm'          // 가상 머신 (컨테이너)
-  | 'db'          // 데이터베이스 서버
-  | 'was'         // 웹/애플리케이션 서버
-  | 'web'         // 웹 서버
+  | 'vm'          // 가상 머신
   | 'firewall'    // 방화벽 (컨테이너)
-  | 'lb'          // 로드밸런서
   | 'client'      // 클라이언트
   | 'external'    // 외부 시스템
   | 'custom'      // 사용자 정의
   | 'zone';       // 네트워크 존 (컨테이너)
 
 /** 컨테이너로 동작하는 variant 목록 */
-export const CONTAINER_VARIANTS: NodeVariant[] = ['zone', 'firewall', 'vm'];
+export const CONTAINER_VARIANTS: NodeVariant[] = ['zone', 'firewall'];
 
 /** 해당 variant가 컨테이너인지 판별 */
 export function isContainerVariant(variant: NodeVariant): boolean {
@@ -56,6 +52,9 @@ export const SERVICE_TYPE_ICONS: Record<ServiceType, string> = {
   custom: '🔧',
 };
 
+/** 이중화 역할 */
+export type HaRole = 'active' | 'standby' | '';
+
 /** 서버 노드 메타데이터 (컨테이너 노드도 동일 구조 사용) */
 export interface ServerData {
   label: string;
@@ -71,6 +70,12 @@ export interface ServerData {
   color: string;
   borderColor: string;
   displayMode: 'summary' | 'detail';
+  haGroup: string;
+  haRole: HaRole;
+  haVip: string;
+  haVhostname: string;
+  // @xyflow/react v12 의 Node<T> 제약(Record<string, unknown>) 충족용
+  [key: string]: unknown;
 }
 
 /** React Flow 노드 타입 */
@@ -107,6 +112,8 @@ export interface EdgeData {
   /** 실제 연결된 핸들 ID (사용자 선택 방향 유지) */
   sourceHandleId?: string;
   targetHandleId?: string;
+  // @xyflow/react v12 의 Edge<T> 제약(Record<string, unknown>) 충족용
+  [key: string]: unknown;
 }
 
 /** React Flow 엣지에 사용될 전체 엣지 타입 */
@@ -136,6 +143,7 @@ export interface CanvasState {
 /** 전체 다이어그램 데이터 (저장 형식) */
 export interface DiagramData {
   version: string;
+  name?: string;
   canvas: CanvasState;
   nodes: InfraNode[];
   edges: InfraEdge[];
@@ -159,10 +167,7 @@ export interface NodeTypeConfig {
 /** 서버 노드 유형 설정 — borderColor가 타이틀 바 색상으로 사용됨 */
 export const SERVER_NODE_CONFIGS: NodeTypeConfig[] = [
   { variant: 'physical',  label: '물리 서버',     icon: '🖥️', defaultColor: '#FFFFFF', defaultBorderColor: '#1565C0', isContainer: false },
-  { variant: 'db',        label: 'DB 서버',       icon: '🗄️', defaultColor: '#FFFFFF', defaultBorderColor: '#1565C0', isContainer: false },
-  { variant: 'was',       label: 'WAS 서버',      icon: '⚙️', defaultColor: '#FFFFFF', defaultBorderColor: '#1565C0', isContainer: false },
-  { variant: 'web',       label: '웹 서버',       icon: '🌐', defaultColor: '#FFFFFF', defaultBorderColor: '#0277BD', isContainer: false },
-  { variant: 'lb',        label: '로드밸런서',    icon: '⚖️', defaultColor: '#FFFFFF', defaultBorderColor: '#6A1B9A', isContainer: false },
+  { variant: 'vm',        label: '가상 머신',     icon: '💻', defaultColor: '#FFFFFF', defaultBorderColor: '#2E7D32', isContainer: false },
   { variant: 'client',    label: '클라이언트',    icon: '👤', defaultColor: '#FFFFFF', defaultBorderColor: '#455A64', isContainer: false },
   { variant: 'external',  label: '외부 시스템',   icon: '☁️', defaultColor: '#FFFFFF', defaultBorderColor: '#E65100', isContainer: false },
   { variant: 'custom',    label: '사용자 정의',   icon: '📦', defaultColor: '#FFFFFF', defaultBorderColor: '#616161', isContainer: false },
@@ -172,7 +177,6 @@ export const SERVER_NODE_CONFIGS: NodeTypeConfig[] = [
 export const CONTAINER_NODE_CONFIGS: NodeTypeConfig[] = [
   { variant: 'zone',      label: '네트워크 존',   icon: '🔲', defaultColor: '#E3F2FD', defaultBorderColor: '#1976D2', isContainer: true },
   { variant: 'firewall',  label: '방화벽',        icon: '🛡️', defaultColor: '#FCE4EC', defaultBorderColor: '#E91E63', isContainer: true },
-  { variant: 'vm',        label: '가상 머신',     icon: '💻', defaultColor: '#E8F5E9', defaultBorderColor: '#2E7D32', isContainer: true },
 ];
 
 /** 전체 노드 유형 설정 (하위 호환) */
@@ -263,20 +267,14 @@ export const DEFAULT_DISPLAY_SETTINGS: NodeDisplaySettings = {
 // ============================================================
 
 import physicalIcon from './assets/icons/physical.png';
-import dbIcon from './assets/icons/db.png';
 import firewallIcon from './assets/icons/firewall.png';
 import vmIcon from './assets/icons/vm.png';
-import wasIcon from './assets/icons/was.png';
-import lbIcon from './assets/icons/lb.png';
 
 /** variant별 커스텀 아이콘 URL 맵 */
 export const CUSTOM_ICONS: Partial<Record<NodeVariant, string>> = {
   physical: physicalIcon,
-  db: dbIcon,
   firewall: firewallIcon,
   vm: vmIcon,
-  was: wasIcon,
-  lb: lbIcon,
 };
 
 // ============================================================
@@ -287,7 +285,6 @@ export const CUSTOM_ICONS: Partial<Record<NodeVariant, string>> = {
 export const CONTAINER_DEFAULT_SIZE: Record<string, { width: number; height: number }> = {
   zone:     { width: 700, height: 500 },
   firewall: { width: 500, height: 400 },
-  vm:       { width: 400, height: 300 },
 };
 
 export function createDefaultServerData(variant: NodeVariant): ServerData {
@@ -306,6 +303,10 @@ export function createDefaultServerData(variant: NodeVariant): ServerData {
     color: config.defaultColor,
     borderColor: config.defaultBorderColor,
     displayMode: 'summary',
+    haGroup: '',
+    haRole: '',
+    haVip: '',
+    haVhostname: '',
   };
 }
 
