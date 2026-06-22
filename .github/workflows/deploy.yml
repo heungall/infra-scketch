@@ -1,9 +1,9 @@
 name: Deploy to GitHub Pages
 
-# master 브랜치에 푸시될 때마다 자동으로 빌드 후 GitHub Pages 에 배포한다.
+# main 브랜치에 푸시될 때마다 자동으로 빌드 후 GitHub Pages 에 배포한다.
 on:
   push:
-    branches: [master]
+    branches: [main]
   workflow_dispatch: # 수동 실행도 허용
 
 # GitHub Pages 배포에 필요한 권한
