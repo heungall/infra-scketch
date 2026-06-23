@@ -256,6 +256,14 @@ function ServiceListEditor({
     onChange(services.filter((_, i) => i !== idx));
   };
 
+  const moveService = (idx: number, dir: -1 | 1) => {
+    const target = idx + dir;
+    if (target < 0 || target >= services.length) return;
+    const next = [...services];
+    [next[idx], next[target]] = [next[target], next[idx]];
+    onChange(next);
+  };
+
   const typeOptions: { value: ServiceType; label: string }[] = (
     Object.entries(SERVICE_TYPE_LABELS) as [ServiceType, string][]
   ).map(([value, label]) => ({ value, label }));
@@ -282,6 +290,25 @@ function ServiceListEditor({
               placeholder="Oracle 19c"
               className="flex-1 min-w-0 text-xs border border-gray-300 rounded px-1.5 py-0.5"
             />
+            {/* 순서 이동 ▲▼ */}
+            <div className="flex flex-col shrink-0 -my-0.5 leading-none">
+              <button
+                onClick={() => moveService(idx, -1)}
+                disabled={idx === 0}
+                className="text-[9px] text-gray-400 hover:text-gray-700 disabled:opacity-20 disabled:cursor-not-allowed"
+                title="위로 이동"
+              >
+                ▲
+              </button>
+              <button
+                onClick={() => moveService(idx, 1)}
+                disabled={idx === services.length - 1}
+                className="text-[9px] text-gray-400 hover:text-gray-700 disabled:opacity-20 disabled:cursor-not-allowed"
+                title="아래로 이동"
+              >
+                ▼
+              </button>
+            </div>
             <button
               onClick={() => removeService(idx)}
               className="text-red-400 hover:text-red-600 text-sm px-0.5 shrink-0"
